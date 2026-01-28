@@ -1,25 +1,67 @@
-<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <title>M3U8 JSON Parser</title>
-  <style>
-    body { font-family: sans-serif; margin: 20px; }
-    pre { background: #111; color: #eee; padding: 12px; border-radius: 8px; overflow: auto; }
-    .notice { background: #fff3cd; padding: 8px; border: 1px solid #ffeeba; border-radius: 6px; margin-bottom: 12px; }
-  </style>
 </head>
 <body>
-  <h1>M3U8 → JSON Parser</h1>
-  <div class="notice">โหลดไฟล์จากพารามิเตอร์ <code>?file=URL</code> เช่น <br>
-    <code>JSON-Parser.html?file=m3u.txt</code>
-  </div>
   <pre id="output">[]</pre>
-
 <script>
-async function main() {
+function parseM3U8(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const entries = [];
+  let current = null;
+
+  const parseAttrs = (line) => {
+    const attrs = {};
+    const regex = /(\w[\w-]*)="([^"]*)"/g;
+    let m;
+    while ((m = regex.exec(line)) !== null) {
+      attrs[m[1]] = m[2];
+    }
+    return attrs;
+  };
+
+  const flush = () => {
+    if (current && current.name && current.video) entries.push(current);
+    current = null;
+  };
+
+  for (let line of lines) {
+    if (line.startsWith("#EXTINF")) {
+      flush();
+      current = {
+        "player": "p2p/player",
+        "name": "",
+        "category": "",
+        "info": {
+          "poster": "",
+          "description": "พากย์ไทย"
+                },
+        "video": "",
+        "Referrer": ""
+      };
+      const commaIdx = line.indexOf(",");
+      const header = line.slice(0, commaIdx);
+      const title = line.slice(commaIdx+1).trim();
+      const attrs = parseAttrs(header);
+      current.category = attrs["group-title"] || "";
+      current.info.poster = attrs["tvg-logo"] || "";
+      current.name = title;
+    } else if (line.startsWith("#EXTVLCOPT:http-referrer=")) {
+      if (current) current.Referrer = line.replace("#EXTVLCOPT:http-referrer=","").trim();
+    } else if (!line.startsWith("#")) {
+      if (current) current.video = line;
+    }
+  }
+  flush();
+  return entries;
+}
+
+(async () => {
   const params = new URLSearchParams(window.location.search);
   const fileUrl = params.get("file");
+  const mode = params.get("mode");
+
   if (!fileUrl) {
     document.getElementById("output").textContent = "กรุณาระบุพารามิเตอร์ ?file=...";
     return;
@@ -28,60 +70,20 @@ async function main() {
   try {
     const res = await fetch(fileUrl);
     const text = await res.text();
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const movies = parseM3U8(text);
 
-    const entries = [];
-    let current = null;
-
-    const parseAttrs = (line) => {
-      const attrs = {};
-      const regex = /(\w[\w-]*)="([^"]*)"/g;
-      let m;
-      while ((m = regex.exec(line)) !== null) {
-        attrs[m[1]] = m[2];
-      }
-      return attrs;
-    };
-
-    const flush = () => {
-      if (current && current.name && current.video) entries.push(current);
-      current = null;
-    };
-
-    for (let i=0; i<lines.length; i++) {
-      const line = lines[i];
-      if (line.startsWith("#EXTINF")) {
-        flush();
-        current = {
-          player: "p2p/player",
-          group: "",
-          name: "",
-          info: "พากย์ไทย",
-          poster: "",
-          video: "",
-          Referrer: ""
-        };
-        const commaIdx = line.indexOf(",");
-        const header = line.slice(0, commaIdx);
-        const title = line.slice(commaIdx+1).trim();
-        const attrs = parseAttrs(header);
-        current.group = attrs["group-title"] || "";
-        current.poster = attrs["tvg-logo"] || "";
-        current.name = title;
-      } else if (line.startsWith("#EXTVLCOPT:http-referrer=")) {
-        if (current) current.Referrer = line.replace("#EXTVLCOPT:http-referrer=","").trim();
-      } else if (!line.startsWith("#")) {
-        if (current) current.video = line;
-      }
+    if (mode === "json") {
+      // ✅ ส่งออก JSON เพียว ๆ
+      document.open();
+      document.write(JSON.stringify(movies));
+      document.close();
+    } else {
+      document.getElementById("output").textContent = JSON.stringify(movies, null, 2);
     }
-    flush();
-
-    document.getElementById("output").textContent = JSON.stringify(entries, null, 2);
   } catch (e) {
     document.getElementById("output").textContent = "Error: " + e;
   }
-}
-main();
+})();
 </script>
 </body>
 </html>
