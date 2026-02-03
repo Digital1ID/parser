@@ -2,14 +2,14 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Anime Playlist Parser (JSON Version)</title>
+  <title>Anime Playlist Parser (JSON)</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
   </style>
 </head>
 <body>
-  <h1>Anime Playlist Parser (JSON Version)</h1>
+  <h1>Anime Playlist Parser (JSON)</h1>
   <div id="output">Loading...</div>
 
   <script>
@@ -46,6 +46,80 @@
       }
     }
 
+    async function parseCategory(id) {
+      const categoryUrl = `https://animehdzerooo.com/catagory/${id}`;
+      const html = await fetchViaProxy(categoryUrl);
+      if (!html) return null;
+
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const title = doc.querySelector(".card-body h1")?.textContent.trim() || "";
+      const img = doc.querySelector(".card-body img");
+      const poster = img ? img.src : "";
+      const synopsis = doc.querySelector(".card-body p")?.textContent.trim() || "";
+
+      // ตรวจหา pagination
+      let pages = 1;
+      const pageNodes = doc.querySelectorAll("ul.pagination a");
+      pageNodes.forEach(p => {
+        const num = parseInt(p.textContent);
+        if (!isNaN(num) && num > pages) pages = num;
+      });
+
+      let episodes = [];
+      let epNum = 1;
+
+      for (let i = 1; i <= pages; i++) {
+        const pageUrl = `${categoryUrl}?page=${i}`;
+        const pageHtml = await fetchViaProxy(pageUrl);
+        if (!pageHtml) continue;
+
+        const pageDoc = new DOMParser().parseFromString(pageHtml, "text/html");
+        const epLinks = pageDoc.querySelectorAll(".card-body a");
+
+        for (const ep of epLinks) {
+          const epUrl = ep.href;
+          const watchHtml = await fetchViaProxy(epUrl);
+          if (!watchHtml) continue;
+
+          const watchData = parseWatchPage(watchHtml);
+          const m3u8 = decodeEmbedUrl(watchData.playerSrc);
+
+          episodes.push({
+            episode: epNum,
+            name: watchData.title || `ตอนที่ ${epNum}`,
+            video: m3u8,
+            subtitle: "",
+            referrer: "https://files.akuma-player.xyz/"
+          });
+
+          epNum++;
+        }
+      }
+
+      return {
+        id,
+        name: title,
+        category: "",
+        info: {
+          poster,
+          description: synopsis,
+          year: new Date().getFullYear()
+        },
+        seasons: [
+          {
+            season: 1,
+            name: title + " Season 1",
+            info: {
+              poster,
+              description: synopsis,
+              year: new Date().getFullYear()
+            },
+            episodes
+          }
+        ]
+      };
+    }
+
     async function main() {
       const params = new URLSearchParams(window.location.search);
       const ids = params.get("ids")?.split(",") || ["4814"];
@@ -53,57 +127,8 @@
       let result = [];
 
       for (const id of ids) {
-        const categoryUrl = `https://animehdzerooo.com/catagory/${id}`;
-        const html = await fetchViaProxy(categoryUrl);
-        if (!html) {
-          result.push({ id, error: "โหลดข้อมูลไม่สำเร็จ" });
-          continue;
-        }
-
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const title = doc.querySelector(".card-body h1")?.textContent.trim() || "";
-        const img = doc.querySelector(".card-body img");
-        const poster = img ? img.src : "";
-        const synopsis = doc.querySelector(".card-body p")?.textContent.trim() || "";
-
-        // ตัวอย่าง: ดึงตอนแรก
-        const epLink = doc.querySelector(".card-body a")?.href;
-        let episodes = [];
-        if (epLink) {
-          const watchHtml = await fetchViaProxy(epLink);
-          const watchData = parseWatchPage(watchHtml);
-          const m3u8 = decodeEmbedUrl(watchData.playerSrc);
-          episodes.push({
-            episode: 1,
-            name: watchData.title || "ตอนที่ 1",
-            video: m3u8,
-            subtitle: "",
-            referrer: "https://files.akuma-player.xyz/"
-          });
-        }
-
-        result.push({
-          id,
-          name: title,
-          category: "",
-          info: {
-            poster,
-            description: synopsis,
-            year: new Date().getFullYear()
-          },
-          seasons: [
-            {
-              season: 1,
-              name: title + " Season 1",
-              info: {
-                poster,
-                description: synopsis,
-                year: new Date().getFullYear()
-              },
-              episodes
-            }
-          ]
-        });
+        const seriesData = await parseCategory(id);
+        if (seriesData) result.push(seriesData);
       }
 
       output.innerHTML = `<pre>${JSON.stringify(result, null, 4)}</pre>`;
