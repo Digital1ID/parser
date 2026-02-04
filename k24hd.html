@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Kub24HD Playlist Parser</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    .series { margin-bottom: 30px; }
+    .poster { max-width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
+  <div id="output">Loading...</div>
+
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+async function fetchJsonViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+// ดึง player iframe จาก API
+async function getPlayer(postId) {
+  const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
+  const json = await fetchJsonViaProxy(apiUrl);
+  if (!json?.success) return null;
+
+  const doc = new DOMParser().parseFromString(json.player, "text/html");
+  const iframe = doc.querySelector("iframe");
+  return iframe ? iframe.src : null;
+}
+
+// แปลง iframe embed → .m3u8
+function convertEmbedToM3U8(embedUrl) {
+  try {
+    const url = new URL(embedUrl);
+    const videoId = url.pathname.split("/").pop();
+    return `https://media.vdohls.com/${videoId}/playlist.m3u8`;
+  } catch {
+    return null;
+  }
+}
+
+// สร้าง playlist .m3u
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster?.src || "";
+  const title = seriesData.title || "ซีรีส์";
+  let epNum = 1;
+  for (const ep of seriesData.episodes) {
+    const link = ep.m3u8 || "";
+    if (link) {
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" , ${title} EP${String(epNum).padStart(2,"0")}\n`;
+      m3u += link + "\n";
+    }
+    epNum++;
+  }
+  return m3u;
+}
+
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const seriesUrl = params.get("url") || "https://kub24hd.com/series/backstreet-rookie-2020/";
+  const output = document.getElementById("output");
+  output.innerHTML = "";
+
+  const html = await fetchViaProxy(seriesUrl);
+  if (!html) {
+    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
+    return;
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const title = doc.querySelector("h1")?.textContent.trim() || "";
+  const img = doc.querySelector("img.wp-post-image");
+  const poster = img ? { src: img.src, alt: img.alt } : {};
+  const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+
+  // ดึง episode IDs
+  const epButtons = doc.querySelectorAll("#eplist button.ep");
+  let episodes = [];
+  for (const btn of epButtons) {
+    const postId = btn.id;
+    const epTitle = btn.textContent.trim();
+    const iframeSrc = await getPlayer(postId);
+    const m3u8Link = convertEmbedToM3U8(iframeSrc);
+    episodes.push({ epTitle, m3u8: m3u8Link });
+  }
+
+  const seriesData = { poster, title, synopsis, episodes };
+  const m3u = generateM3U(seriesData);
+
+  output.innerHTML = `
+    <div class="series">
+      <h2>${title}</h2>
+      <img class="poster" src="${poster.src}" alt="${poster.alt}">
+      <p>${synopsis}</p>
+      <h3>Playlist (.m3u)</h3>
+      <pre>${m3u}</pre>
+    </div>
+  `;
+}
+
+main();
+</script>
+</body>
+</html>
