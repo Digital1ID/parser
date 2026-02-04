@@ -67,14 +67,14 @@ function convertEmbedToM3U8(embedUrl) {
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster?.src || "";
-  const title = seriesData.title || "ซีรีส์";
+  const title = seriesData.title || "ซีรี่ย์";
 
   for (const ep of seriesData.episodes) {
     let epNum = ep.number;
     let seasonNum = ep.season || 1;
     for (const link of ep.m3u8List) {
       if (link) {
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
+        m3u += `#EXTINF:-1 type="series" group-title=""  tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} E${String(epNum).padStart(2,"0")}\n`;
         m3u += link + "\n";
       }
     }
@@ -86,7 +86,7 @@ function generateJSON(seriesData) {
   return [{
     id: seriesData.id || "",
     name: seriesData.title || "",
-    category: "ซีรีส์",
+    category: "ซีรี่ย์",
     info: {
       poster: seriesData.poster?.src || "",
       description: seriesData.synopsis || "",
