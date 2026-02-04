@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>123HDTV Playlist Parser</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    .series { margin-bottom: 30px; }
+    .poster { max-width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>123HDTV Playlist Parser</h1>
+  <div id="output">Loading...</div>
+
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+// แปลง iframe embed → .m3u8
+function convertEmbedToM3U8(embedUrl) {
+  try {
+    const url = new URL(embedUrl);
+    const id = url.searchParams.get("id");
+    if (!id) return null;
+    return `https://main.24playerhd.com/newplaylist/${id}/${id}.m3u8`;
+  } catch {
+    return null;
+  }
+}
+
+// สร้าง playlist .m3u
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster || "";
+  const title = seriesData.title || "ซีรีส์";
+
+  for (const ep of seriesData.episodes) {
+    if (ep.video) {
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.number}", ${title} S01 EP${String(ep.number).padStart(2,"0")}\n`;
+      m3u += ep.video + "\n";
+    }
+  }
+  return m3u;
+}
+
+// สร้าง JSON Output
+function generateJSON(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "ซีรีส์",
+    info: {
+      poster: seriesData.poster || "",
+      description: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: 1,
+        name: "Season 1",
+        info: {
+          poster: seriesData.poster || "",
+          description: seriesData.synopsis || "",
+          year: new Date().getFullYear()
+        },
+        episodes: seriesData.episodes.map(ep => ({
+          episode: ep.number,
+          name: ep.epTitle || `ตอนที่ ${ep.number}`,
+          video: ep.video || "",
+          subtitle: "",
+          referrer: "https://main.24playerhd.com/"
+        }))
+      }
+    ]
+  }];
+}
+
+async function main() {
+  const seriesUrl = "https://www.123hdtv.com/a-knight-of-the-seven-kingdoms";
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+
+  const html = await fetchViaProxy(seriesUrl);
+  if (!html) {
+    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
+    return;
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // ดึงข้อมูลซีรีส์
+  const title = doc.querySelector("h1.entry-title")?.textContent.trim() || "";
+  const poster = doc.querySelector("img.movie-thumb")?.src || "";
+  const synopsis = doc.querySelector("p.category")?.textContent.trim() || "";
+
+  // ดึง episodes จากตาราง Sequel
+  const epRows = doc.querySelectorAll("#Sequel tbody tr");
+  let episodes = [];
+  epRows.forEach(row => {
+    const epNum = parseInt(row.querySelector("td:nth-child(2)")?.textContent.trim() || "0", 10);
+    const epTitle = row.querySelector("td a")?.textContent.trim() || `EP ${epNum}`;
+
+    // ดึง iframe player
+    const iframe = doc.querySelector("#ajax-player iframe");
+    const embedUrl = iframe?.src || "";
+    const m3u8 = convertEmbedToM3U8(embedUrl);
+
+    episodes.push({ number: epNum, epTitle, video: m3u8 });
+  });
+
+  const seriesData = { id: "a-knight-of-the-seven-kingdoms", poster, title, synopsis, episodes };
+  const m3u = generateM3U(seriesData);
+  const jsonData = generateJSON(seriesData);
+
+  output.innerHTML = `
+    <div class="series">
+      <h2>${title}</h2>
+      <img class="poster" src="${poster}" alt="${title}">
+      <p>${synopsis}</p>
+      <h3>Playlist (.m3u)</h3>
+      <pre>${m3u}</pre>
+      <h3>JSON Data</h3>
+      <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+    </div>
+  `;
+}
+
+main();
+</script>
+</body>
+</html>
