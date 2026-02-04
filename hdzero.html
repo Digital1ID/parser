@@ -57,7 +57,7 @@
       for (const ep of seriesData.episodes) {
         const link = ep.embed?.player?.m3u8 || "";
         if (link) {
-          m3u += `#EXTINF:-1 tvg-logo="${logo}" , ${title} E${String(epNum).padStart(2,"0")}\n`;
+          m3u += `#EXTINF:-1 type="series" group-title=""  tvg-logo="${logo}" tvg-season="" tvg-episode="${epNum}", ${title} E${String(epNum).padStart(2,"0")}\n`;
           m3u += `#EXTVLCOPT:http-referrer=https://files.akuma-player.xyz/\n`;
           m3u += link + "\n";
         }
