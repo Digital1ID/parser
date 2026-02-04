@@ -52,10 +52,10 @@ async function getPlayer(postId, mode = "main") {
     // เอาเฉพาะตัวเล่นหลัก (iframe ตัวแรก)
     if (iframes.length > 0) sources.push(iframes[0].src);
   } else if (mode === "backup") {
-    // เอาเฉพาะตัวเล่นสำรอง (ปุ่ม data-src ที่ไม่ใช่ตัวแรก)
+    // เอาเฉพาะตัวเล่นสำรอง (ปุ่ม data-src ที่ไม่ใช่ตัวหลัก)
     buttons.forEach(btn => {
       const src = btn.getAttribute("data-src");
-      if (src && !src.includes("hdplayfull")) { // กรองตัวหลักออก
+      if (src && !src.includes("hdplayfull")) {
         sources.push(src);
       }
     });
@@ -94,45 +94,49 @@ function generateM3U(seriesData) {
 }
 
 async function main(mode = "main") {
-  const seriesUrl = "https://kub24hd.com/series/backstreet-rookie-2020/";
+  const params = new URLSearchParams(window.location.search);
+  const ids = params.get("ids")?.split(",") || ["backstreet-rookie-2020"];
   const output = document.getElementById("output");
   output.innerHTML = "Loading...";
 
-  const html = await fetchViaProxy(seriesUrl);
-  if (!html) {
-    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
-    return;
+  for (const id of ids) {
+    const seriesUrl = `https://kub24hd.com/series/${id}/`;
+    const html = await fetchViaProxy(seriesUrl);
+    if (!html) {
+      output.innerHTML += `<p>โหลดข้อมูลไม่สำเร็จสำหรับ ${id}</p>`;
+      continue;
+    }
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const title = doc.querySelector("h1")?.textContent.trim() || id;
+    const img = doc.querySelector("img.wp-post-image");
+    const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
+    const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+
+    // ดึง episode IDs
+    const epButtons = doc.querySelectorAll("#eplist button.ep");
+    let episodes = [];
+    for (const btn of epButtons) {
+      const postId = btn.id;
+      const epTitle = btn.textContent.trim();
+      const sources = await getPlayer(postId, mode);
+      const m3u8List = sources.map(src => convertEmbedToM3U8(src)).filter(Boolean);
+      episodes.push({ epTitle, m3u8List });
+    }
+
+    const seriesData = { poster, title, synopsis, episodes };
+    const m3u = generateM3U(seriesData);
+
+    output.innerHTML += `
+      <div class="series">
+        <h2>${title}</h2>
+        <img class="poster" src="${poster.src}" alt="${poster.alt}">
+        <p>${synopsis}</p>
+        <h3>Playlist (.m3u)</h3>
+        <pre>${m3u}</pre>
+      </div>
+    `;
   }
-
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const title = doc.querySelector("h1")?.textContent.trim() || "";
-  const img = doc.querySelector("img.wp-post-image");
-  const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
-  const synopsis = doc.querySelector("p")?.textContent.trim() || "";
-
-  // ดึง episode IDs
-  const epButtons = doc.querySelectorAll("#eplist button.ep");
-  let episodes = [];
-  for (const btn of epButtons) {
-    const postId = btn.id;
-    const epTitle = btn.textContent.trim();
-    const sources = await getPlayer(postId, mode);
-    const m3u8List = sources.map(src => convertEmbedToM3U8(src)).filter(Boolean);
-    episodes.push({ epTitle, m3u8List });
-  }
-
-  const seriesData = { poster, title, synopsis, episodes };
-  const m3u = generateM3U(seriesData);
-
-  output.innerHTML = `
-    <div class="series">
-      <h2>${title}</h2>
-      <img class="poster" src="${poster.src}" alt="${poster.alt}">
-      <p>${synopsis}</p>
-      <h3>Playlist (.m3u)</h3>
-      <pre>${m3u}</pre>
-    </div>
-  `;
 }
 
 // โหลดครั้งแรกเป็นเฉพาะตัวเล่นหลัก
