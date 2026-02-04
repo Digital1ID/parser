@@ -8,11 +8,18 @@
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
     .series { margin-bottom: 30px; }
     .poster { max-width: 200px; }
-    button.download { margin-top: 10px; padding: 8px 12px; background: #0078d7; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .controls { margin: 15px 0; }
+    button { margin-right: 10px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    button.main { background: #0078d7; color: #fff; }
+    button.backup { background: #444; color: #fff; }
   </style>
 </head>
 <body>
   <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
+  <div class="controls">
+    <button class="main" onclick="main('main')">เฉพาะตัวเล่นหลัก</button>
+    <button class="backup" onclick="main('backup')">เฉพาะตัวเล่นสำรอง</button>
+  </div>
   <div id="output">Loading...</div>
 
 <script>
@@ -31,7 +38,7 @@ async function fetchJsonViaProxy(url) {
 }
 
 // ดึง player iframe จาก API
-async function getPlayer(postId) {
+async function getPlayer(postId, mode = "main") {
   const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
   const json = await fetchJsonViaProxy(apiUrl);
   if (!json?.success) return [];
@@ -41,16 +48,18 @@ async function getPlayer(postId) {
   const buttons = doc.querySelectorAll("button[data-src]");
   let sources = [];
 
-  // iframe หลัก
-  if (iframes.length > 0) {
-    sources.push(iframes[0].src);
+  if (mode === "main") {
+    // เอาเฉพาะตัวเล่นหลัก (iframe ตัวแรก)
+    if (iframes.length > 0) sources.push(iframes[0].src);
+  } else if (mode === "backup") {
+    // เอาเฉพาะตัวเล่นสำรอง (ปุ่ม data-src ที่ไม่ใช่ตัวแรก)
+    buttons.forEach(btn => {
+      const src = btn.getAttribute("data-src");
+      if (src && !src.includes("hdplayfull")) { // กรองตัวหลักออก
+        sources.push(src);
+      }
+    });
   }
-
-  // ปุ่ม source สำรอง
-  buttons.forEach(btn => {
-    const src = btn.getAttribute("data-src");
-    if (src) sources.push(src);
-  });
 
   return sources;
 }
@@ -84,22 +93,10 @@ function generateM3U(seriesData) {
   return m3u;
 }
 
-// ฟังก์ชันดาวน์โหลดไฟล์ .m3u
-function downloadM3U(content, filename="playlist.m3u") {
-  const blob = new Blob([content], { type: "audio/x-mpegurl" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function main() {
-  const params = new URLSearchParams(window.location.search);
-  const seriesUrl = params.get("url") || "https://kub24hd.com/series/backstreet-rookie-2020/";
+async function main(mode = "main") {
+  const seriesUrl = "https://kub24hd.com/series/backstreet-rookie-2020/";
   const output = document.getElementById("output");
-  output.innerHTML = "";
+  output.innerHTML = "Loading...";
 
   const html = await fetchViaProxy(seriesUrl);
   if (!html) {
@@ -119,7 +116,7 @@ async function main() {
   for (const btn of epButtons) {
     const postId = btn.id;
     const epTitle = btn.textContent.trim();
-    const sources = await getPlayer(postId);
+    const sources = await getPlayer(postId, mode);
     const m3u8List = sources.map(src => convertEmbedToM3U8(src)).filter(Boolean);
     episodes.push({ epTitle, m3u8List });
   }
@@ -134,12 +131,12 @@ async function main() {
       <p>${synopsis}</p>
       <h3>Playlist (.m3u)</h3>
       <pre>${m3u}</pre>
-      <button class="download" onclick="downloadM3U(\`${m3u}\`, '${title}.m3u')">ดาวน์โหลด Playlist</button>
     </div>
   `;
 }
 
-main();
+// โหลดครั้งแรกเป็นเฉพาะตัวเล่นหลัก
+main("main");
 </script>
 </body>
 </html>
