@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Kub24HD Playlist Parser</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    .series { margin-bottom: 30px; }
+    .poster { max-width: 200px; }
+    .controls { margin: 15px 0; }
+    button { margin: 5px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    button.season { background: #888; color: #fff; }
+    button.source { background: #0078d7; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
+  <div class="controls" id="season-controls"></div>
+  <div class="controls" id="source-controls"></div>
+  <div id="output">Loading...</div>
+
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+async function fetchJsonViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+// ดึง player iframe จาก API
+async function getPlayer(postId) {
+  const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
+  const json = await fetchJsonViaProxy(apiUrl);
+  if (!json?.success) return [];
+
+  const doc = new DOMParser().parseFromString(json.player, "text/html");
+  const buttons = doc.querySelectorAll("button[data-src]");
+  let sources = [];
+
+  buttons.forEach(btn => {
+    const src = btn.getAttribute("data-src");
+    const label = btn.textContent.trim();
+    if (src) sources.push({ src, label });
+  });
+
+  return sources;
+}
+
+function convertEmbedToM3U8(embedUrl) {
+  try {
+    const url = new URL(embedUrl);
+    const videoId = url.pathname.split("/").pop();
+    return `https://media.vdohls.com/${videoId}/playlist.m3u8`;
+  } catch {
+    return null;
+  }
+}
+
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster?.src || "";
+  const title = seriesData.title || "ซีรีส์";
+
+  for (const ep of seriesData.episodes) {
+    let epNum = ep.number;
+    let seasonNum = ep.season || 1;
+    for (const link of ep.m3u8List) {
+      if (link) {
+        m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
+        m3u += link + "\n";
+      }
+    }
+  }
+  return m3u;
+}
+
+function generateJSON(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "ซีรีส์",
+    info: {
+      poster: seriesData.poster?.src || "",
+      description: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: seriesData.season || 1,
+        name: `Season ${seriesData.season || 1}`,
+        info: {
+          poster: seriesData.poster?.src || "",
+          description: seriesData.synopsis || "",
+          year: new Date().getFullYear()
+        },
+        episodes: seriesData.episodes.map(ep => ({
+          episode: ep.number,
+          name: ep.epTitle || `ตอนที่ ${ep.number}`,
+          video: ep.m3u8List[0] || "",
+          subtitle: "",
+          referrer: "https://hplay.hdplayfull.xyz/"
+        }))
+      }
+    ]
+  }];
+}
+
+let currentSeason = 1;
+let currentSourcePref = "main";
+
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const ids = params.get("ids")?.split(",") || ["backstreet-rookie-2020"];
+  currentSourcePref = params.get("source") || currentSourcePref;
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+
+  for (const id of ids) {
+    const seriesUrl = `https://kub24hd.com/series/${id}/`;
+    const html = await fetchViaProxy(seriesUrl);
+    if (!html) {
+      output.innerHTML += `<p>โหลดข้อมูลไม่สำเร็จสำหรับ ${id}</p>`;
+      continue;
+    }
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const title = doc.querySelector("h1")?.textContent.trim() || id;
+    const img = doc.querySelector("img.wp-post-image");
+    const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
+    const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+
+    // ดึง season ทั้งหมด
+    const seasonBtns = doc.querySelectorAll("button.season-btn");
+    const seasonControls = document.getElementById("season-controls");
+    seasonControls.innerHTML = "";
+    seasonBtns.forEach((btn, index) => {
+      const seasonText = btn.textContent.trim();
+      const seasonNum = parseInt(seasonText.replace(/[^0-9]/g, ""), 10) || (index+1);
+      const buttonEl = document.createElement("button");
+      buttonEl.className = "season";
+      buttonEl.textContent = seasonText;
+      buttonEl.onclick = () => { currentSeason = seasonNum; main(); };
+      seasonControls.appendChild(buttonEl);
+    });
+
+    // ดึง episode IDs เฉพาะ season ที่เลือก
+    const epArea = doc.querySelector(`#eplist div[data-season="${seasonBtns[currentSeason-1]?.getAttribute("season-id")}"]`);
+    const epButtons = epArea ? epArea.querySelectorAll("button.ep") : [];
+    let episodes = [];
+    let epIndex = 1;
+    for (const btn of epButtons) {
+      const postId = btn.id;
+      const epTitle = btn.textContent.trim();
+      const sources = await getPlayer(postId);
+
+      // เลือก source ตามค่า query string หรือปุ่ม
+      let chosen = sources.find(s => currentSourcePref === "backup" ? s.label.includes("สำรอง") : s.label.includes("หลัก"));
+      const m3u8List = chosen ? [convertEmbedToM3U8(chosen.src)] : [];
+      episodes.push({ epTitle, number: epIndex, season: currentSeason, m3u8List });
+      epIndex++;
+    }
+
+    const seriesData = { id, poster, title, synopsis, season: currentSeason, episodes };
+    const m3u = generateM3U(seriesData);
+    const jsonData = generateJSON(seriesData);
+
+    output.innerHTML = `
+      <div class="series">
+        <h2>${title}</h2>
+        <img class="poster" src="${poster.src}" alt="${poster.alt}">
+        <p>${synopsis}</p>
+        <h3>Playlist (.m3u)</h3>
+        <pre>${m3u}</pre>
+        <h3>JSON Data</h3>
+        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+      </div>
+    `;
+  }
+}
+
+// โหลดครั้งแรก
+main();
+</script>
+</body>
+</html>
