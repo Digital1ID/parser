@@ -8,6 +8,7 @@
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
     .series { margin-bottom: 30px; }
     .poster { max-width: 200px; }
+    button.download { margin-top: 10px; padding: 8px 12px; background: #0078d7; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -33,11 +34,25 @@ async function fetchJsonViaProxy(url) {
 async function getPlayer(postId) {
   const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
   const json = await fetchJsonViaProxy(apiUrl);
-  if (!json?.success) return null;
+  if (!json?.success) return [];
 
   const doc = new DOMParser().parseFromString(json.player, "text/html");
-  const iframe = doc.querySelector("iframe");
-  return iframe ? iframe.src : null;
+  const iframes = doc.querySelectorAll("iframe");
+  const buttons = doc.querySelectorAll("button[data-src]");
+  let sources = [];
+
+  // iframe หลัก
+  if (iframes.length > 0) {
+    sources.push(iframes[0].src);
+  }
+
+  // ปุ่ม source สำรอง
+  buttons.forEach(btn => {
+    const src = btn.getAttribute("data-src");
+    if (src) sources.push(src);
+  });
+
+  return sources;
 }
 
 // แปลง iframe embed → .m3u8
@@ -58,14 +73,26 @@ function generateM3U(seriesData) {
   const title = seriesData.title || "ซีรีส์";
   let epNum = 1;
   for (const ep of seriesData.episodes) {
-    const link = ep.m3u8 || "";
-    if (link) {
-      m3u += `#EXTINF:-1 tvg-logo="${logo}" , ${title} EP${String(epNum).padStart(2,"0")}\n`;
-      m3u += link + "\n";
+    for (const link of ep.m3u8List) {
+      if (link) {
+        m3u += `#EXTINF:-1 tvg-logo="${logo}" , ${title} EP${String(epNum).padStart(2,"0")}\n`;
+        m3u += link + "\n";
+      }
     }
     epNum++;
   }
   return m3u;
+}
+
+// ฟังก์ชันดาวน์โหลดไฟล์ .m3u
+function downloadM3U(content, filename="playlist.m3u") {
+  const blob = new Blob([content], { type: "audio/x-mpegurl" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function main() {
@@ -83,7 +110,7 @@ async function main() {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const title = doc.querySelector("h1")?.textContent.trim() || "";
   const img = doc.querySelector("img.wp-post-image");
-  const poster = img ? { src: img.src, alt: img.alt } : {};
+  const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
   const synopsis = doc.querySelector("p")?.textContent.trim() || "";
 
   // ดึง episode IDs
@@ -92,9 +119,9 @@ async function main() {
   for (const btn of epButtons) {
     const postId = btn.id;
     const epTitle = btn.textContent.trim();
-    const iframeSrc = await getPlayer(postId);
-    const m3u8Link = convertEmbedToM3U8(iframeSrc);
-    episodes.push({ epTitle, m3u8: m3u8Link });
+    const sources = await getPlayer(postId);
+    const m3u8List = sources.map(src => convertEmbedToM3U8(src)).filter(Boolean);
+    episodes.push({ epTitle, m3u8List });
   }
 
   const seriesData = { poster, title, synopsis, episodes };
@@ -107,6 +134,7 @@ async function main() {
       <p>${synopsis}</p>
       <h3>Playlist (.m3u)</h3>
       <pre>${m3u}</pre>
+      <button class="download" onclick="downloadM3U(\`${m3u}\`, '${title}.m3u')">ดาวน์โหลด Playlist</button>
     </div>
   `;
 }
