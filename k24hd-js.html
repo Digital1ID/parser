@@ -16,26 +16,14 @@
 </head>
 <body>
   <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
-  <div class="controls" id="season-controls"></div>
-  <div class="controls" id="source-controls"></div>
-  <div id="output">Loading...</div>
+<div class="controls" id="season-controls"></div>
+<div class="controls" id="source-controls"></div>
+<div id="output">Loading...</div>
 
 <script>
-async function fetchViaProxy(url) {
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) return null;
-  return await res.text();
-}
+let currentSeason = 1;
+let currentSource = null; // เก็บ source ที่เลือก
 
-async function fetchJsonViaProxy(url) {
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) return null;
-  return await res.json();
-}
-
-// ดึง player iframe จาก API
 async function getPlayer(postId) {
   const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
   const json = await fetchJsonViaProxy(apiUrl);
@@ -54,74 +42,13 @@ async function getPlayer(postId) {
   return sources;
 }
 
-function convertEmbedToM3U8(embedUrl) {
-  try {
-    const url = new URL(embedUrl);
-    const videoId = url.pathname.split("/").pop();
-    return `https://media.vdohls.com/${videoId}/playlist.m3u8`;
-  } catch {
-    return null;
-  }
-}
-
-function generateM3U(seriesData) {
-  let m3u = "#EXTM3U\n";
-  const logo = seriesData.poster?.src || "";
-  const title = seriesData.title || "ซีรีส์";
-
-  for (const ep of seriesData.episodes) {
-    let epNum = ep.number;
-    let seasonNum = ep.season || 1;
-    for (const link of ep.m3u8List) {
-      if (link) {
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
-        m3u += link + "\n";
-      }
-    }
-  }
-  return m3u;
-}
-
-function generateJSON(seriesData) {
-  return [{
-    id: seriesData.id || "",
-    name: seriesData.title || "",
-    category: "ซีรีส์",
-    info: {
-      poster: seriesData.poster?.src || "",
-      description: seriesData.synopsis || "",
-      year: new Date().getFullYear()
-    },
-    seasons: [
-      {
-        season: seriesData.season || 1,
-        name: `Season ${seriesData.season || 1}`,
-        info: {
-          poster: seriesData.poster?.src || "",
-          description: seriesData.synopsis || "",
-          year: new Date().getFullYear()
-        },
-        episodes: seriesData.episodes.map(ep => ({
-          episode: ep.number,
-          name: ep.epTitle || `ตอนที่ ${ep.number}`,
-          video: ep.m3u8List[0] || "",
-          subtitle: "",
-          referrer: "https://hplay.hdplayfull.xyz/"
-        }))
-      }
-    ]
-  }];
-}
-
-let currentSeason = 1;
-let currentSourcePref = "main";
-
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const ids = params.get("ids")?.split(",") || ["backstreet-rookie-2020"];
-  currentSourcePref = params.get("source") || currentSourcePref;
   const output = document.getElementById("output");
+  const sourceControls = document.getElementById("source-controls");
   output.innerHTML = "Loading...";
+  sourceControls.innerHTML = "";
 
   for (const id of ids) {
     const seriesUrl = `https://kub24hd.com/series/${id}/`;
@@ -156,13 +83,32 @@ async function main() {
     const epButtons = epArea ? epArea.querySelectorAll("button.ep") : [];
     let episodes = [];
     let epIndex = 1;
+
     for (const btn of epButtons) {
       const postId = btn.id;
       const epTitle = btn.textContent.trim();
       const sources = await getPlayer(postId);
 
-      // เลือก source ตามค่า query string หรือปุ่ม
-      let chosen = sources.find(s => currentSourcePref === "backup" ? s.label.includes("สำรอง") : s.label.includes("หลัก"));
+      // สร้างปุ่ม Source Controls จาก DOM จริง
+      sources.forEach(srcObj => {
+        const buttonEl = document.createElement("button");
+        buttonEl.className = "source";
+        buttonEl.textContent = srcObj.label;
+        buttonEl.onclick = () => {
+          currentSource = srcObj.src;
+          const m3u8 = convertEmbedToM3U8(currentSource);
+          output.innerHTML = `
+            <h3>${title} Playlist (.m3u)</h3>
+            <pre>#EXTM3U
+#EXTINF:-1 tvg-logo="${poster.src}" tvg-season="${currentSeason}" tvg-episode="${epIndex}", ${title} S${String(currentSeason).padStart(2,"0")} EP${String(epIndex).padStart(2,"0")}
+${m3u8}</pre>`;
+        };
+        sourceControls.appendChild(buttonEl);
+      });
+
+      // ถ้ามีค่า source จาก query string → เลือกอัตโนมัติ
+      const sourcePref = params.get("source");
+      let chosen = sources.find(s => sourcePref === "backup" ? s.label.includes("สำรอง") : s.label.includes("หลัก"));
       const m3u8List = chosen ? [convertEmbedToM3U8(chosen.src)] : [];
       episodes.push({ epTitle, number: epIndex, season: currentSeason, m3u8List });
       epIndex++;
@@ -185,9 +131,7 @@ async function main() {
     `;
   }
 }
-
-// โหลดครั้งแรก
-main();
 </script>
+
 </body>
 </html>
