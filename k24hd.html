@@ -84,7 +84,7 @@ function generateM3U(seriesData) {
     let seasonNum = ep.season || 1;
     for (const link of ep.m3u8List) {
       if (link) {
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
+        m3u += `#EXTINF:-1 type="series" group-title="" tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
         m3u += link + "\n";
       }
     }
