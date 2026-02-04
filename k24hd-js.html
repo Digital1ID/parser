@@ -35,14 +35,14 @@ async function fetchJsonViaProxy(url) {
   return await res.json();
 }
 
-// ดึง player iframe จาก API
+// ดึง player iframe และปุ่มตัวเล่นหลัก/สำรองจาก API
 async function getPlayer(postId) {
   const apiUrl = `https://kub24hd.com/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
   const json = await fetchJsonViaProxy(apiUrl);
   if (!json?.success) return [];
 
   const doc = new DOMParser().parseFromString(json.player, "text/html");
-  const buttons = doc.querySelectorAll("button[data-src]");
+  const buttons = doc.querySelectorAll("button.source-select-btn");
   let sources = [];
 
   buttons.forEach(btn => {
@@ -121,7 +121,9 @@ async function main() {
   const ids = params.get("ids")?.split(",") || ["backstreet-rookie-2020"];
   currentSourcePref = params.get("source") || currentSourcePref;
   const output = document.getElementById("output");
+  const sourceControls = document.getElementById("source-controls");
   output.innerHTML = "Loading...";
+  sourceControls.innerHTML = "";
 
   for (const id of ids) {
     const seriesUrl = `https://kub24hd.com/series/${id}/`;
@@ -161,7 +163,21 @@ async function main() {
       const epTitle = btn.textContent.trim();
       const sources = await getPlayer(postId);
 
-      // เลือก source ตามค่า query string หรือปุ่ม
+      // สร้างปุ่ม Source Controls จาก API จริง (ครั้งแรกเท่านั้น)
+      if (epIndex === 1) {
+        sources.forEach(srcObj => {
+          const buttonEl = document.createElement("button");
+          buttonEl.className = "source";
+          buttonEl.textContent = srcObj.label;
+          buttonEl.onclick = () => {
+            currentSourcePref = srcObj.label.includes("สำรอง") ? "backup" : "main";
+            main();
+          };
+          sourceControls.appendChild(buttonEl);
+        });
+      }
+
+      // เลือก source ตามค่า query string หรือปุ่มที่เลือก
       let chosen = sources.find(s => currentSourcePref === "backup" ? s.label.includes("สำรอง") : s.label.includes("หลัก"));
       const m3u8List = chosen ? [convertEmbedToM3U8(chosen.src)] : [];
       episodes.push({ epTitle, number: epIndex, season: currentSeason, m3u8List });
