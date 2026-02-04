@@ -9,13 +9,15 @@
     .series { margin-bottom: 30px; }
     .poster { max-width: 200px; }
     .controls { margin: 15px 0; }
-    button { margin-right: 10px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    button { margin: 5px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
     button.main { background: #0078d7; color: #fff; }
     button.backup { background: #444; color: #fff; }
+    button.season { background: #888; color: #fff; }
   </style>
 </head>
 <body>
   <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
+  <div class="controls" id="season-controls"></div>
   <div class="controls">
     <button class="main" onclick="main('main')">เฉพาะตัวเล่นหลัก</button>
     <button class="backup" onclick="main('backup')">เฉพาะตัวเล่นสำรอง</button>
@@ -49,10 +51,8 @@ async function getPlayer(postId, mode = "main") {
   let sources = [];
 
   if (mode === "main") {
-    // เอาเฉพาะตัวเล่นหลัก (iframe ตัวแรก)
     if (iframes.length > 0) sources.push(iframes[0].src);
   } else if (mode === "backup") {
-    // เอาเฉพาะตัวเล่นสำรอง (ปุ่ม data-src ที่ไม่ใช่ตัวหลัก)
     buttons.forEach(btn => {
       const src = btn.getAttribute("data-src");
       if (src && !src.includes("hdplayfull")) {
@@ -64,7 +64,6 @@ async function getPlayer(postId, mode = "main") {
   return sources;
 }
 
-// แปลง iframe embed → .m3u8
 function convertEmbedToM3U8(embedUrl) {
   try {
     const url = new URL(embedUrl);
@@ -75,23 +74,25 @@ function convertEmbedToM3U8(embedUrl) {
   }
 }
 
-// สร้าง playlist .m3u
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster?.src || "";
   const title = seriesData.title || "ซีรีส์";
-  let epNum = 1;
+
   for (const ep of seriesData.episodes) {
+    let epNum = ep.number;
+    let seasonNum = ep.season || 1;
     for (const link of ep.m3u8List) {
       if (link) {
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" , ${title} EP${String(epNum).padStart(2,"0")}\n`;
+        m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} EP${String(epNum).padStart(2,"0")}\n`;
         m3u += link + "\n";
       }
     }
-    epNum++;
   }
   return m3u;
 }
+
+let currentSeason = 1;
 
 async function main(mode = "main") {
   const params = new URLSearchParams(window.location.search);
@@ -113,21 +114,38 @@ async function main(mode = "main") {
     const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
     const synopsis = doc.querySelector("p")?.textContent.trim() || "";
 
-    // ดึง episode IDs
-    const epButtons = doc.querySelectorAll("#eplist button.ep");
+    // ดึง season ทั้งหมด
+    const seasonBtns = doc.querySelectorAll("button.season-btn");
+    const seasonControls = document.getElementById("season-controls");
+    seasonControls.innerHTML = "";
+    seasonBtns.forEach((btn, index) => {
+      const seasonText = btn.textContent.trim();
+      const seasonNum = parseInt(seasonText.replace(/[^0-9]/g, ""), 10) || (index+1);
+      const buttonEl = document.createElement("button");
+      buttonEl.className = "season";
+      buttonEl.textContent = seasonText;
+      buttonEl.onclick = () => { currentSeason = seasonNum; main(mode); };
+      seasonControls.appendChild(buttonEl);
+    });
+
+    // ดึง episode IDs เฉพาะ season ที่เลือก
+    const epArea = doc.querySelector(`#eplist div[data-season="${seasonBtns[currentSeason-1]?.getAttribute("season-id")}"]`);
+    const epButtons = epArea ? epArea.querySelectorAll("button.ep") : [];
     let episodes = [];
+    let epIndex = 1;
     for (const btn of epButtons) {
       const postId = btn.id;
       const epTitle = btn.textContent.trim();
       const sources = await getPlayer(postId, mode);
       const m3u8List = sources.map(src => convertEmbedToM3U8(src)).filter(Boolean);
-      episodes.push({ epTitle, m3u8List });
+      episodes.push({ epTitle, number: epIndex, season: currentSeason, m3u8List });
+      epIndex++;
     }
 
     const seriesData = { poster, title, synopsis, episodes };
     const m3u = generateM3U(seriesData);
 
-    output.innerHTML += `
+    output.innerHTML = `
       <div class="series">
         <h2>${title}</h2>
         <img class="poster" src="${poster.src}" alt="${poster.alt}">
