@@ -113,7 +113,7 @@ function generateJSON(seriesData) {
 async function main() {
   // รองรับหลายซีรีส์ผ่าน ?ids=...
   const params = new URLSearchParams(window.location.search);
-  const ids = params.get("ids")?.split(",") || ["one-punch-man-season-3-th"];
+  const ids = params.get("ids")?.split(",") || ["yuusha-party-wo-oidasareta-kiyoubinbou"];
   const output = document.getElementById("output");
   output.innerHTML = "Loading...";
 
