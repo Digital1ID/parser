@@ -29,7 +29,7 @@ function extractEpisodesFromMVP(doc) {
   epItems.forEach(a => {
     const url = a.href;
     const title = a.getAttribute("title") || a.textContent.trim();
-    const epNum = parseInt(a.querySelector(".eptitle")?.textContent.trim() || "0", 10);
+    const epNum = parseInt((a.querySelector(".eptitle")?.textContent || "0").trim(), 10);
     if (epNum) {
       episodes.push({ episode: epNum, title, url });
     }
