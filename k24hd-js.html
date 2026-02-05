@@ -22,14 +22,14 @@
 
 <script>
 async function fetchViaProxy(url) {
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const proxyUrl = `/api/proxy-k24hd?url=${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl);
   if (!res.ok) return null;
   return await res.text();
 }
 
 async function fetchJsonViaProxy(url) {
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const proxyUrl = `/api/proxy-k24hd?url=${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl);
   if (!res.ok) return null;
   return await res.json();
