@@ -46,6 +46,19 @@ function extractEmbedCode(doc) {
   return match ? match[1] : null;
 }
 
+// 📡 ดึง embed code ผ่าน Ajax ถ้าไม่มี iframe ตรง ๆ
+async function fetchEmbedFromAjax(postId) {
+  const ajaxUrl = `https://anime-good.com/wp-admin/admin-ajax.php?storage_type=cookies&storage_data=&action=pvc-check-post&id=${postId}`;
+  const html = await fetchViaProxy(ajaxUrl);
+  if (!html) return null;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const iframe = doc.querySelector("iframe");
+  if (!iframe) return null;
+  const src = iframe.src;
+  const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
+  return match ? match[1] : null;
+}
+
 // แปลง embed code → .m3u8
 function convertCodeToM3U8(code) {
   return code ? `https://moji.abcdxzy.xyz:8443/vod/${code}/video.mp4/playlist.m3u8` : null;
@@ -125,7 +138,16 @@ async function main() {
     for (const ep of episodesRaw) {
       const epHtml = await fetchViaProxy(ep.url);
       const epDoc = new DOMParser().parseFromString(epHtml, "text/html");
-      const code = extractEmbedCode(epDoc);
+      let code = extractEmbedCode(epDoc);
+
+      // ถ้าไม่เจอ iframe → ลอง Ajax
+      if (!code) {
+        const postIdMatch = epDoc.querySelector(".mpIframe")?.className.match(/iframe-(\d+)/);
+        if (postIdMatch) {
+          code = await fetchEmbedFromAjax(postIdMatch[1]);
+        }
+      }
+
       const m3u8 = convertCodeToM3U8(code);
       episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
     }
