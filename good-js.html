@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Anime-Good Playlist Parser</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    .series { margin-bottom: 30px; }
+    .poster { max-width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Anime-Good Playlist Parser</h1>
+  <div id="output">Loading...</div>
+
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+// 📺 Extract episodes จาก ul#MVP
+function extractEpisodesFromMVP(doc) {
+  const epItems = doc.querySelectorAll("ul#MVP li.mvp a");
+  let episodes = [];
+  epItems.forEach(a => {
+    const url = a.href;
+    const title = a.getAttribute("title") || a.textContent.trim();
+    const epNum = parseInt(a.querySelector(".eptitle")?.textContent.trim() || "0", 10);
+    if (epNum) {
+      episodes.push({ episode: epNum, title, url });
+    }
+  });
+  return episodes;
+}
+
+// 🔗 Extract embed code จาก iframe
+function extractEmbedCode(doc) {
+  const iframe = doc.querySelector("iframe");
+  if (!iframe) return null;
+  const src = iframe.src;
+  const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
+  return match ? match[1] : null;
+}
+
+// แปลง embed code → .m3u8
+function convertCodeToM3U8(code) {
+  return code ? `https://moji.abcdxzy.xyz:8443/vod/${code}/video.mp4/playlist.m3u8` : null;
+}
+
+// สร้าง playlist .m3u
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster || "";
+  const title = seriesData.title || "ซีรีส์";
+  for (const ep of seriesData.episodes) {
+    if (ep.video) {
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}", ${title} S01 EP${String(ep.episode).padStart(2,"0")}\n`;
+      m3u += ep.video + "\n";
+    }
+  }
+  return m3u;
+}
+
+// สร้าง JSON Output
+function generateJSON(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "อนิเมะ",
+    info: {
+      poster: seriesData.poster || "",
+      description: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: 1,
+        name: "Season 1",
+        info: {
+          poster: seriesData.poster || "",
+          description: seriesData.synopsis || "",
+          year: new Date().getFullYear()
+        },
+        episodes: seriesData.episodes.map(ep => ({
+          episode: ep.episode,
+          name: ep.title,
+          video: ep.video || "",
+          subtitle: "",
+          referrer: "https://anime-good.com/"
+        }))
+      }
+    ]
+  }];
+}
+
+async function main() {
+  const seriesUrl = "https://anime-good.com/one-punch-man-season-3-th/";
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+
+  const html = await fetchViaProxy(seriesUrl);
+  if (!html) {
+    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
+    return;
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // ดึงข้อมูลซีรีส์
+  const title = doc.querySelector("h2.ep-head-h2")?.textContent.trim() || "";
+  const poster = doc.querySelector("img")?.src || "";
+  const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+
+  // ดึง episodes
+  const episodesRaw = extractEpisodesFromMVP(doc);
+  let episodes = [];
+  for (const ep of episodesRaw) {
+    const epHtml = await fetchViaProxy(ep.url);
+    const epDoc = new DOMParser().parseFromString(epHtml, "text/html");
+    const code = extractEmbedCode(epDoc);
+    const m3u8 = convertCodeToM3U8(code);
+    episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
+  }
+
+  const seriesData = { id: "one-punch-man-season-3", poster, title, synopsis, episodes };
+  const m3u = generateM3U(seriesData);
+  const jsonData = generateJSON(seriesData);
+
+  output.innerHTML = `
+    <div class="series">
+      <h2>${title}</h2>
+      <img class="poster" src="${poster}" alt="${title}">
+      <p>${synopsis}</p>
+      <h3>Playlist (.m3u)</h3>
+      <pre>${m3u}</pre>
+      <h3>JSON Data</h3>
+      <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+    </div>
+  `;
+}
+
+main();
+</script>
+</body>
+</html>
