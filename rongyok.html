@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Rongyok Parser</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Rongyok Playlist Parser</h1>
+  <div id="output">Loading...</div>
+
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy-rongyok?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+function extractSeriesData(html) {
+  const match = html.match(/const\s+seriesData\s*=\s*(\{.*?\});/s);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1].replace(/[\n\r\t]/g, ''));
+  } catch (e) {
+    console.error("Parse error:", e);
+    return null;
+  }
+}
+
+function generateJSON(data) {
+  const posterUrl = data.jpg_url ? "https://rongyok.com/" + data.jpg_url.replace(/^\//, '') : "";
+  const seasons = [{
+    season: 1,
+    episodes: (data.episodes || []).map(ep => ({
+      episode: ep.episode_number,
+      name: `ตอนที่ ${ep.episode_number}`,
+      video: ep.video_url,
+      referrer: "https://rongyok.com/"
+    }))
+  }];
+
+  return {
+    id: data.id,
+    name: data.title,
+    category: "ซีรี่ย์จีนสั้น",
+    info: {
+      poster: posterUrl,
+      description: data.description,
+      year: new Date(data.created_at).getFullYear()
+    },
+    seasons
+  };
+}
+
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const seriesId = params.get("series_id") || "1038";
+  const url = `https://rongyok.com/watch/?series_id=${seriesId}`;
+
+  const html = await fetchViaProxy(url);
+  const data = extractSeriesData(html);
+  const jsonData = generateJSON(data);
+
+  document.getElementById("output").innerHTML = `
+    <h2>${jsonData.name}</h2>
+    <img src="${jsonData.info.poster}" style="max-width:200px">
+    <p>${jsonData.info.description}</p>
+    <h3>JSON Data</h3>
+    <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+  `;
+}
+
+main();
+</script>
+</body>
+</html>
