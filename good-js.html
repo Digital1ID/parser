@@ -98,49 +98,54 @@ function generateJSON(seriesData) {
 }
 
 async function main() {
-  const seriesUrl = "https://anime-good.com/one-punch-man-season-3-th/";
+  // รองรับหลายซีรีส์ผ่าน ?ids=...
+  const params = new URLSearchParams(window.location.search);
+  const ids = params.get("ids")?.split(",") || ["one-punch-man-season-3-th"];
   const output = document.getElementById("output");
   output.innerHTML = "Loading...";
 
-  const html = await fetchViaProxy(seriesUrl);
-  if (!html) {
-    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
-    return;
+  for (const id of ids) {
+    const seriesUrl = `https://anime-good.com/${id}/`;
+    const html = await fetchViaProxy(seriesUrl);
+    if (!html) {
+      output.innerHTML += `<p>โหลดข้อมูลไม่สำเร็จสำหรับ ${id}</p>`;
+      continue;
+    }
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // ดึงข้อมูลซีรีส์
+    const title = doc.querySelector("h2.ep-head-h2")?.textContent.trim() || id;
+    const poster = doc.querySelector("img")?.src || "";
+    const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+
+    // ดึง episodes
+    const episodesRaw = extractEpisodesFromMVP(doc);
+    let episodes = [];
+    for (const ep of episodesRaw) {
+      const epHtml = await fetchViaProxy(ep.url);
+      const epDoc = new DOMParser().parseFromString(epHtml, "text/html");
+      const code = extractEmbedCode(epDoc);
+      const m3u8 = convertCodeToM3U8(code);
+      episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
+    }
+
+    const seriesData = { id, poster, title, synopsis, episodes };
+    const m3u = generateM3U(seriesData);
+    const jsonData = generateJSON(seriesData);
+
+    output.innerHTML += `
+      <div class="series">
+        <h2>${title}</h2>
+        <img class="poster" src="${poster}" alt="${title}">
+        <p>${synopsis}</p>
+        <h3>Playlist (.m3u)</h3>
+        <pre>${m3u}</pre>
+        <h3>JSON Data</h3>
+        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+      </div>
+    `;
   }
-
-  const doc = new DOMParser().parseFromString(html, "text/html");
-
-  // ดึงข้อมูลซีรีส์
-  const title = doc.querySelector("h2.ep-head-h2")?.textContent.trim() || "";
-  const poster = doc.querySelector("img")?.src || "";
-  const synopsis = doc.querySelector("p")?.textContent.trim() || "";
-
-  // ดึง episodes
-  const episodesRaw = extractEpisodesFromMVP(doc);
-  let episodes = [];
-  for (const ep of episodesRaw) {
-    const epHtml = await fetchViaProxy(ep.url);
-    const epDoc = new DOMParser().parseFromString(epHtml, "text/html");
-    const code = extractEmbedCode(epDoc);
-    const m3u8 = convertCodeToM3U8(code);
-    episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
-  }
-
-  const seriesData = { id: "one-punch-man-season-3", poster, title, synopsis, episodes };
-  const m3u = generateM3U(seriesData);
-  const jsonData = generateJSON(seriesData);
-
-  output.innerHTML = `
-    <div class="series">
-      <h2>${title}</h2>
-      <img class="poster" src="${poster}" alt="${title}">
-      <p>${synopsis}</p>
-      <h3>Playlist (.m3u)</h3>
-      <pre>${m3u}</pre>
-      <h3>JSON Data</h3>
-      <pre>${JSON.stringify(jsonData, null, 2)}</pre>
-    </div>
-  `;
 }
 
 main();
