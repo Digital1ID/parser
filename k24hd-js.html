@@ -113,6 +113,22 @@ function generateJSON(seriesData) {
   }];
 }
 
+function generateJHAT(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "ซีรี่ย์",
+    info: {
+      poster: seriesData.poster?.src || "",
+      description: seriesData.synopsis || "",
+      year: new Date().getFullYear(),
+        sound: "พากย์ไทย",
+        subtitles: ""
+      },
+    video: seriesData.id || ""
+  }];
+}
+
 let currentSeason = 1;
 let currentSourcePref = "main";
 
@@ -186,6 +202,7 @@ async function main() {
 
     const seriesData = { id, poster, title, synopsis, season: currentSeason, episodes };
     const m3u = generateM3U(seriesData);
+    const jhatData = generateJHAT(seriesData);
     const jsonData = generateJSON(seriesData);
 
     output.innerHTML = `
@@ -195,6 +212,8 @@ async function main() {
         <p>${synopsis}</p>
         <h3>Playlist (.m3u)</h3>
         <pre>${m3u}</pre>
+        <h3>JSON Head</h3>
+        <pre>${JSON.stringify(jhatData, null, 2)}</pre>
         <h3>JSON Data</h3>
         <pre>${JSON.stringify(jsonData, null, 2)}</pre>
       </div>
