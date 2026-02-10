@@ -78,9 +78,9 @@ async function main() {
     <h2>${jsonData.name}</h2>
     <img src="${jsonData.info.poster}" style="max-width:200px">
     <p>${jsonData.info.description}</p>
+    <button id="downloadBtn">Download JSON</button>
     <h3>JSON Data</h3>
     <pre>${JSON.stringify(jsonData, null, 2)}</pre>
-    <button id="downloadBtn">Download JSON</button>
   `;
 
   document.getElementById("downloadBtn").addEventListener("click", () => {
