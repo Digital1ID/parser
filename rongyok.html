@@ -6,6 +6,7 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    button { margin-top: 10px; padding: 8px 12px; }
   </style>
 </head>
 <body>
@@ -56,6 +57,14 @@ function generateJSON(data) {
   };
 }
 
+function downloadJSON(jsonData, seriesId) {
+  const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${seriesId}.json`;
+  link.click();
+}
+
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const seriesId = params.get("series_id") || "1038";
@@ -71,7 +80,12 @@ async function main() {
     <p>${jsonData.info.description}</p>
     <h3>JSON Data</h3>
     <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+    <button id="downloadBtn">Download JSON</button>
   `;
+
+  document.getElementById("downloadBtn").addEventListener("click", () => {
+    downloadJSON(jsonData, seriesId);
+  });
 }
 
 main();
