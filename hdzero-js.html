@@ -2,139 +2,178 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Anime Playlist Parser (JSON)</title>
+  <title>Anime Playlist Parser (JSON + M3U/TXT)</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
   </style>
 </head>
 <body>
-  <h1>Anime Playlist Parser (JSON)</h1>
+  <h1>Anime Playlist Parser (JSON + M3U/TXT)</h1>
   <div id="output">Loading...</div>
 
-  <script>
-    async function fetchViaProxy(url) {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl);
-      if (!res.ok) return null;
-      return await res.text();
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+function parseWatchPage(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const title = doc.querySelector(".post-title h3")?.textContent.trim() || "";
+  const img = doc.querySelector(".bottom-1x img");
+  const poster = img ? img.src : "";
+  const synopsis = doc.querySelector("#synopsis p")?.textContent.trim() || "";
+  const iframe = doc.querySelector("iframe");
+  const playerSrc = iframe?.src || "";
+  return { title, poster, synopsis, playerSrc };
+}
+
+// ฟังก์ชันแปลง videoId เป็นลิงก์ .m3u8 หรือ .txt
+function convertVideoId(videoId, type = "m3u8") {
+  if (!videoId) return "";
+  switch (type) {
+    case "txt":
+      return `https://files.akuma-player.xyz/view/${videoId}.txt`;
+    case "m3u8":
+    default:
+      return `https://files.akuma-player.xyz/view/${videoId}.m3u8`;
+  }
+}
+
+function decodeEmbedUrl(embedUrl, type = "m3u8") {
+  try {
+    const url = new URL(embedUrl);
+    const link = url.searchParams.get("link");
+    if (!link) return "";
+    const decoded = atob(link);
+    const parsed = new URL(decoded);
+    const pathParts = parsed.pathname.split("/");
+    const videoId = pathParts[pathParts.length - 1];
+    return convertVideoId(videoId, type);
+  } catch {
+    return "";
+  }
+}
+
+function generateM3U(seriesData, type = "m3u8") {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.info.poster || "";
+  const title = seriesData.name || "Anime";
+  for (const ep of seriesData.seasons[0].episodes) {
+    if (ep.video) {
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}", ${title} EP${String(ep.episode).padStart(2,"0")}\n`;
+      m3u += ep.video + "\n";
     }
+  }
+  return m3u;
+}
 
-    function parseWatchPage(html) {
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      const title = doc.querySelector(".post-title h3")?.textContent.trim() || "";
-      const img = doc.querySelector(".bottom-1x img");
-      const poster = img ? img.src : "";
-      const synopsis = doc.querySelector("#synopsis p")?.textContent.trim() || "";
-      const iframe = doc.querySelector("iframe");
-      const playerSrc = iframe?.src || "";
-      return { title, poster, synopsis, playerSrc };
-    }
+async function parseCategory(id, type = "m3u8") {
+  const categoryUrl = `https://animehdzerooo.com/catagory/${id}`;
+  const html = await fetchViaProxy(categoryUrl);
+  if (!html) return null;
 
-    function decodeEmbedUrl(embedUrl) {
-      try {
-        const url = new URL(embedUrl);
-        const link = url.searchParams.get("link");
-        if (!link) return "";
-        const decoded = atob(link);
-        const parsed = new URL(decoded);
-        const pathParts = parsed.pathname.split("/");
-        const videoId = pathParts[pathParts.length - 1];
-        return `https://files.akuma-player.xyz/view/${videoId}.m3u8`;
-      } catch {
-        return "";
-      }
-    }
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const title = doc.querySelector(".card-body h1")?.textContent.trim() || "";
+  const img = doc.querySelector(".card-body img");
+  const poster = img ? img.src : "";
+  const synopsis = doc.querySelector(".card-body p")?.textContent.trim() || "";
 
-    async function parseCategory(id) {
-      const categoryUrl = `https://animehdzerooo.com/catagory/${id}`;
-      const html = await fetchViaProxy(categoryUrl);
-      if (!html) return null;
+  // ตรวจหา pagination
+  let pages = 1;
+  const pageNodes = doc.querySelectorAll("ul.pagination a");
+  pageNodes.forEach(p => {
+    const num = parseInt(p.textContent);
+    if (!isNaN(num) && num > pages) pages = num;
+  });
 
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      const title = doc.querySelector(".card-body h1")?.textContent.trim() || "";
-      const img = doc.querySelector(".card-body img");
-      const poster = img ? img.src : "";
-      const synopsis = doc.querySelector(".card-body p")?.textContent.trim() || "";
+  let episodes = [];
+  let epNum = 1;
 
-      // ตรวจหา pagination
-      let pages = 1;
-      const pageNodes = doc.querySelectorAll("ul.pagination a");
-      pageNodes.forEach(p => {
-        const num = parseInt(p.textContent);
-        if (!isNaN(num) && num > pages) pages = num;
+  for (let i = 1; i <= pages; i++) {
+    const pageUrl = `${categoryUrl}?page=${i}`;
+    const pageHtml = await fetchViaProxy(pageUrl);
+    if (!pageHtml) continue;
+
+    const pageDoc = new DOMParser().parseFromString(pageHtml, "text/html");
+    const epLinks = pageDoc.querySelectorAll(".card-body a");
+
+    for (const ep of epLinks) {
+      const epUrl = ep.href;
+      const watchHtml = await fetchViaProxy(epUrl);
+      if (!watchHtml) continue;
+
+      const watchData = parseWatchPage(watchHtml);
+      const videoLink = decodeEmbedUrl(watchData.playerSrc, type);
+
+      episodes.push({
+        episode: epNum,
+        name: watchData.title || `ตอนที่ ${epNum}`,
+        video: videoLink,
+        subtitle: "",
+        referrer: "https://files.akuma-player.xyz/"
       });
 
-      let episodes = [];
-      let epNum = 1;
+      epNum++;
+    }
+  }
 
-      for (let i = 1; i <= pages; i++) {
-        const pageUrl = `${categoryUrl}?page=${i}`;
-        const pageHtml = await fetchViaProxy(pageUrl);
-        if (!pageHtml) continue;
-
-        const pageDoc = new DOMParser().parseFromString(pageHtml, "text/html");
-        const epLinks = pageDoc.querySelectorAll(".card-body a");
-
-        for (const ep of epLinks) {
-          const epUrl = ep.href;
-          const watchHtml = await fetchViaProxy(epUrl);
-          if (!watchHtml) continue;
-
-          const watchData = parseWatchPage(watchHtml);
-          const m3u8 = decodeEmbedUrl(watchData.playerSrc);
-
-          episodes.push({
-            episode: epNum,
-            name: watchData.title || `ตอนที่ ${epNum}`,
-            video: m3u8,
-            subtitle: "",
-            referrer: "https://files.akuma-player.xyz/"
-          });
-
-          epNum++;
-        }
-      }
-
-      return {
-        id,
-        name: title,
-        category: "",
+  return {
+    id,
+    name: title,
+    category: "อนิเมะ",
+    info: {
+      poster,
+      description: synopsis,
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: 1,
+        name: title + " Season 1",
         info: {
           poster,
           description: synopsis,
           year: new Date().getFullYear()
         },
-        seasons: [
-          {
-            season: 1,
-            name: title + " Season 1",
-            info: {
-              poster,
-              description: synopsis,
-              year: new Date().getFullYear()
-            },
-            episodes
-          }
-        ]
-      };
-    }
-
-    async function main() {
-      const params = new URLSearchParams(window.location.search);
-      const ids = params.get("ids")?.split(",") || ["4814"];
-      const output = document.getElementById("output");
-      let result = [];
-
-      for (const id of ids) {
-        const seriesData = await parseCategory(id);
-        if (seriesData) result.push(seriesData);
+        episodes
       }
+    ]
+  };
+}
 
-      output.innerHTML = `<pre>${JSON.stringify(result, null, 4)}</pre>`;
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const ids = params.get("ids")?.split(",") || ["4814"];
+  const type = params.get("type") || "m3u8"; // เลือก output จาก query string
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+  let result = [];
+
+  for (const id of ids) {
+    const seriesData = await parseCategory(id, type);
+    if (seriesData) {
+      result.push(seriesData);
+      const playlist = generateM3U(seriesData, type);
+      output.innerHTML += `
+        <div class="series">
+          <h2>${seriesData.name}</h2>
+          <img src="${seriesData.info.poster}" style="max-width:200px">
+          <p>${seriesData.info.description}</p>
+          <h3>Playlist (.${type})</h3>
+          <pre>${playlist}</pre>
+          <h3>JSON Data</h3>
+          <pre>${JSON.stringify(seriesData, null, 4)}</pre>
+        </div>
+      `;
     }
+  }
+}
 
-    main();
-  </script>
+main();
+</script>
 </body>
 </html>
