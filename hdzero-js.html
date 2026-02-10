@@ -61,7 +61,7 @@ function decodeEmbedUrl(embedUrl, type = "m3u8") {
 function generateM3U(seriesData, type = "m3u8") {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.info.poster || "";
-  const title = seriesData.name || "Anime";
+  const title = seriesData.name || "ซีรี่ย์ การ์ตูน";
   for (const ep of seriesData.seasons[0].episodes) {
     if (ep.video) {
       m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}", ${title} EP${String(ep.episode).padStart(2,"0")}\n`;
@@ -124,7 +124,7 @@ async function parseCategory(id, type = "m3u8") {
   return {
     id,
     name: title,
-    category: "อนิเมะ",
+    category: "ซีรี่ย์ การ์ตูน",
     info: {
       poster,
       description: synopsis,
