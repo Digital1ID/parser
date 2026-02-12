@@ -45,7 +45,7 @@ async function fetchSeriesById(showId) {
           seasonNo
           episodes {
             episodeNo titleTh titleEn
-            video { transcodeUuid cdnHostname }
+            video { transcodeUuid cdnHostname subtitleMetadata }
           }
         }
       }
@@ -87,13 +87,16 @@ async function fetchSeriesById(showId) {
         const base = `https://${cdnHostname}/${transcodeUuid}`;
         videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
 
-        // ตรวจ subtitle
-        const subtitleVariants = [
-          { lang: "th", codec: "VTT", label: "Thai (VTT)", src: `${base}/sub_tha.vtt` },
-          { lang: "th", codec: "BDN", label: "Thai (BDN)", src: `${base}/sub_tha/index.xml` }
-        ];
-        for (const sub of subtitleVariants) {
-          if (await checkSubtitleExists(sub.src)) subtitle.push(sub);
+        // ตรวจ subtitle จาก metadata
+        if (ep.video?.subtitleMetadata) {
+          for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
+            for (const sub of subs) {
+              const src = `${base}/${sub.pathName}.${sub.codec.toLowerCase()}`;
+              if (await checkSubtitleExists(src)) {
+                subtitle.push({ lang, codec: sub.codec, src });
+              }
+            }
+          }
         }
 
         // โหลด playlist.m3u8 เพื่อตรวจหา audio track
