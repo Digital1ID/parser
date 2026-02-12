@@ -16,6 +16,10 @@
   <div id="output">รอรับข้อมูล...</div>
 
 <script>
+const nationMap = {
+  TH: "ซีรีส์ ไทย", KR: "ซีรีส์ เกาหลี", JP: "ซีรีส์ ญี่ปุ่น", US: "ซีรีส์ สหรัฐอเมริกา"
+};
+
 async function checkSubtitleExists(url) {
   try {
     const res = await fetch(url, { method: 'HEAD' });
@@ -25,7 +29,6 @@ async function checkSubtitleExists(url) {
   }
 }
 
-// ฟังก์ชันตรวจหา audio track URI จาก playlist.m3u8
 function extractAudioTracks(m3u8Text) {
   const audioTracks = [];
   const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="([^"]+)".*?URI="([^"]+)"/g;
@@ -41,13 +44,11 @@ async function fetchSeriesById(showId) {
     query getShow($id: Int!) {
       show(id: $id) {
         id titleTh titleEn slug synopsisTh descriptionTh releaseDate
-        posterUrl backdropUrl rating imdbRating nation viewed createdAt
-        genres { name slug }
-        tags { name slug }
+        posterUrl backdropUrl rating imdbRating nation
         episodes {
           seasonNo episodeNo titleTh titleEn synopsisTh releaseDate
-          posterUrl backdropUrl viewed
-          video { transcodeUuid cdnHostname previewUrl duration subtitleMetadata }
+          posterUrl backdropUrl
+          video { transcodeUuid cdnHostname subtitleMetadata }
         }
       }
     }
@@ -61,31 +62,39 @@ async function fetchSeriesById(showId) {
 
   const result = await response.json();
   const show = result?.data?.show;
-  if (!show) {
-    return { error: "❌ ไม่พบข้อมูลซีรีส์ id=" + showId };
-  }
+  if (!show) return { error: "❌ ไม่พบข้อมูลซีรีส์ id=" + showId };
 
   const seriesData = {
     id: show.id,
     name: `${show.titleTh} (${show.titleEn})`,
-    slug: show.slug,
+    category: nationMap[show.nation] || "ซีรีส์",
     info: {
-      synopsis: show.synopsisTh || show.descriptionTh || "-",
       poster: show.posterUrl,
-      backdrop: show.backdropUrl,
-      rating: show.imdbRating || show.rating || "N/A",
-      nation: show.nation,
-      year: show.releaseDate?.substring(0,4) || "0000",
-      genres: show.genres?.map(g => g.name) || [],
-      tags: show.tags?.map(t => t.name) || []
+      plot: show.synopsisTh || show.descriptionTh || "-",
+      year: show.releaseDate?.substring(0,4) || "0000"
     },
-    episodes: []
+    seasons: []
   };
 
+  const seasonMap = {};
   for (const ep of show.episodes || []) {
-    seriesData.episodes.push(await processEpisode(ep));
+    const seasonNo = parseInt(ep.seasonNo || 1, 10);
+    if (!seasonMap[seasonNo]) {
+      seasonMap[seasonNo] = {
+        season: seasonNo,
+        name: `${show.titleTh} - Season ${seasonNo}`,
+        info: {
+          poster: ep.posterUrl || show.posterUrl,
+          plot: ep.synopsisTh || show.synopsisTh || "-",
+          year: ep.releaseDate?.substring(0,4) || show.releaseDate?.substring(0,4) || "0000"
+        },
+        episodes: []
+      };
+    }
+    seasonMap[seasonNo].episodes.push(await processEpisode(ep));
   }
 
+  seriesData.seasons = Object.values(seasonMap);
   return seriesData;
 }
 
@@ -100,7 +109,6 @@ async function processEpisode(ep) {
     const base = `https://${cdnHostname}/${transcodeUuid}`;
     videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
 
-    // subtitleMetadata
     if (ep.video?.subtitleMetadata) {
       for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
         for (const sub of subs) {
@@ -112,21 +120,17 @@ async function processEpisode(ep) {
       }
     }
 
-    // audioTracks
     try {
       const res = await fetch(videoUrl);
       if (res.ok) {
         const m3u8Text = await res.text();
         audioTracks = extractAudioTracks(m3u8Text);
       }
-    } catch (e) {
-      console.warn("โหลด playlist.m3u8 ไม่สำเร็จ", e);
-    }
+    } catch {}
   }
 
   return {
-    seasonNo: ep.seasonNo,
-    episodeNo: ep.episodeNo,
+    episode: parseInt(ep.episodeNo,10),
     title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`,
     video: videoUrl,
     subtitle,
