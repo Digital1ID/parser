@@ -25,7 +25,6 @@ async function checkSubtitleExists(url) {
   }
 }
 
-// ฟังก์ชันตรวจหา audio track URI จาก playlist.m3u8
 function extractAudioTracks(m3u8Text) {
   const audioTracks = [];
   const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="([^"]+)".*?URI="([^"]+)"/g;
@@ -47,6 +46,10 @@ async function fetchSeriesById(showId) {
             episodeNo titleTh titleEn
             video { transcodeUuid cdnHostname subtitleMetadata }
           }
+        }
+        episodes {
+          seasonNo episodeNo titleTh titleEn
+          video { transcodeUuid cdnHostname subtitleMetadata }
         }
       }
     }
@@ -70,60 +73,69 @@ async function fetchSeriesById(showId) {
     seasons: []
   };
 
+  // กรณีมี seasons
   for (const season of show.seasons || []) {
-    const seasonData = {
-      seasonNo: season.seasonNo,
-      episodes: []
-    };
-
+    const seasonData = { seasonNo: season.seasonNo, episodes: [] };
     for (const ep of season.episodes || []) {
-      const transcodeUuid = ep.video?.transcodeUuid;
-      const cdnHostname = ep.video?.cdnHostname;
-      let videoUrl = "";
-      let subtitle = [];
-      let audioTracks = [];
-
-      if (transcodeUuid && cdnHostname) {
-        const base = `https://${cdnHostname}/${transcodeUuid}`;
-        videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
-
-        // ตรวจ subtitle จาก metadata
-        if (ep.video?.subtitleMetadata) {
-          for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
-            for (const sub of subs) {
-              const src = `${base}/${sub.pathName}.${sub.codec.toLowerCase()}`;
-              if (await checkSubtitleExists(src)) {
-                subtitle.push({ lang, codec: sub.codec, src });
-              }
-            }
-          }
-        }
-
-        // โหลด playlist.m3u8 เพื่อตรวจหา audio track
-        try {
-          const res = await fetch(videoUrl);
-          if (res.ok) {
-            const m3u8Text = await res.text();
-            audioTracks = extractAudioTracks(m3u8Text);
-          }
-        } catch (e) {
-          console.warn("ไม่สามารถโหลด playlist.m3u8 ได้", e);
-        }
-      }
-
-      seasonData.episodes.push({
-        episodeNo: ep.episodeNo,
-        title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`,
-        video: videoUrl,
-        subtitle,
-        audioTracks
-      });
+      seasonData.episodes.push(await processEpisode(ep));
     }
+    seriesData.seasons.push(seasonData);
+  }
 
+  // กรณี episodes อยู่ตรงกับ show
+  if (show.episodes?.length) {
+    const seasonData = { seasonNo: show.episodes[0].seasonNo || 1, episodes: [] };
+    for (const ep of show.episodes) {
+      seasonData.episodes.push(await processEpisode(ep));
+    }
     seriesData.seasons.push(seasonData);
   }
 
   return seriesData;
+}
+
+async function processEpisode(ep) {
+  const transcodeUuid = ep.video?.transcodeUuid;
+  const cdnHostname = ep.video?.cdnHostname;
+  let videoUrl = "";
+  let subtitle = [];
+  let audioTracks = [];
+
+  if (transcodeUuid && cdnHostname) {
+    const base = `https://${cdnHostname}/${transcodeUuid}`;
+    videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
+
+    // subtitleMetadata
+    if (ep.video?.subtitleMetadata) {
+      for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
+        for (const sub of subs) {
+          const src = `${base}/${sub.pathName}.${sub.codec.toLowerCase()}`;
+          if (await checkSubtitleExists(src)) {
+            subtitle.push({ lang, codec: sub.codec, src });
+          }
+        }
+      }
+    }
+
+    // audioTracks
+    try {
+      const res = await fetch(videoUrl);
+      if (res.ok) {
+        const m3u8Text = await res.text();
+        audioTracks = extractAudioTracks(m3u8Text);
+      }
+    } catch (e) {
+      console.warn("โหลด playlist.m3u8 ไม่สำเร็จ", e);
+    }
+  }
+
+  return {
+    episodeNo: ep.episodeNo,
+    title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`,
+    video: videoUrl,
+    subtitle,
+    audioTracks
+  };
 }
 
 document.getElementById("fetchBtn").addEventListener("click", async () => {
