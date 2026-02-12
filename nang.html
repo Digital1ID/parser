@@ -104,7 +104,7 @@ async function fetchMovieById(movieId) {
   }
 
   return {
-    id: show.id,
+    id: movie.id,
     name: `${movie.titleEn || movie.titleTh} - ${movie.titleTh || movie.titleEn}`,
     category,
     info: {
