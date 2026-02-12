@@ -32,6 +32,17 @@ async function checkSubtitleExists(url) {
   }
 }
 
+// ฟังก์ชันตรวจหา audio track URI จาก playlist.m3u8
+function extractAudioTracks(m3u8Text) {
+  const audioTracks = [];
+  const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="([^"]+)".*?URI="([^"]+)"/g;
+  let match;
+  while ((match = regex.exec(m3u8Text)) !== null) {
+    audioTracks.push({ language: match[1], uri: match[2] });
+  }
+  return audioTracks;
+}
+
 async function fetchMovieById(movieId) {
   const query = `
     query getMovie($id: Int!) {
@@ -64,9 +75,14 @@ async function fetchMovieById(movieId) {
   const transcodeUuid = movie.video?.transcodeUuid;
   const cdnHostname = movie.video?.cdnHostname;
   const subtitle = [];
+  let audioTracks = [];
+  let videoUrl = "";
 
   if (transcodeUuid && cdnHostname) {
     const base = `https://${cdnHostname}/${transcodeUuid}`;
+    videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
+
+    // ตรวจ subtitle
     const subtitleVariants = [
       { lang: "th", codec: "VTT", label: "Thai (VTT)", src: `${base}/sub_tha.vtt` },
       { lang: "th", codec: "BDN", label: "Thai (BDN)", src: `${base}/sub_tha/index.xml` }
@@ -74,9 +90,20 @@ async function fetchMovieById(movieId) {
     for (const sub of subtitleVariants) {
       if (await checkSubtitleExists(sub.src)) subtitle.push(sub);
     }
+
+    // โหลด playlist.m3u8 เพื่อตรวจหา audio track
+    try {
+      const res = await fetch(videoUrl);
+      if (res.ok) {
+        const m3u8Text = await res.text();
+        audioTracks = extractAudioTracks(m3u8Text);
+      }
+    } catch (e) {
+      console.warn("ไม่สามารถโหลด playlist.m3u8 ได้", e);
+    }
   }
 
-  const movieData = {
+  return {
     name: `${movie.titleEn || movie.titleTh} - ${movie.titleTh || movie.titleEn}`,
     category,
     info: {
@@ -86,11 +113,10 @@ async function fetchMovieById(movieId) {
       rating: imdbRating,
       year
     },
-    video: transcodeUuid ? `https://${cdnHostname}/${transcodeUuid}/playlist.m3u8` : "",
-    subtitle
+    video: videoUrl,
+    subtitle,
+    audioTracks
   };
-
-  return movieData;
 }
 
 document.getElementById("fetchBtn").addEventListener("click", async () => {
