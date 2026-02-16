@@ -37,6 +37,7 @@
   </div>
   <div id="videoTitle"></div>
 
+<!-- Script Part 1: Utilities + Parsers + Subtitle Handling -->
 <script>
 // --- Utilities ---
 async function checkSubtitleExists(url){ try{ const res=await fetch(url,{method:"HEAD"}); return res.ok; }catch{ return false; } }
@@ -80,13 +81,33 @@ function renderSubtitleMenu(subtitles){ const video=document.getElementById("vid
     const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected); if(bdnEntry){ const { folder }=await loadBDNAsVTT(bdnEntry.src.replace("/index.xml",""), bdnEntry.videoId, bdnEntry.cdn); activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn); } }; }
 
 // --- Responsive Overlay ---
-function activateBDNOverlay(folder,videoId,cdn){ const track=Array.from(video.textTracks).find(t=>t.label==="BDN"); if(!track) return; track.mode="hidden";
-  video.addEventListener("timeupdate",()=>{ const cue=Array.from(track.activeCues||[])[0]; if(cue&&cue.text.trim()){ const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
-    const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`; subtitleOverlay.src=imgURL;
-    subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px"; subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
-    subtitleOverlay.style.display="block"; subtitleOverlay.style.opacity="1"; } else { subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; } }); }
+function activateBDNOverlay(folder,videoId,cdn){
+  const track=Array.from(video.textTracks).find(t=>t.label==="BDN");
+  if(!track) return;
+  track.mode="hidden";
 
+  video.addEventListener("timeupdate",()=>{
+    const cue=Array.from(track.activeCues||[])[0];
+    if(cue && cue.text.trim()){
+      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.src=imgURL;
+
+      // Responsive scaling
+      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
+      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
+
+      subtitleOverlay.style.display="block";
+      subtitleOverlay.style.opacity="1";
+    } else {
+      subtitleOverlay.style.opacity="0";
+      subtitleOverlay.style.display="none";
+    }
+  });
+}
 </script>
+
+<!-- Script Part 2: Player Init + Init Page -->
 <script>
 // --- Player Init ---
 function initPlayer(videoURL){
