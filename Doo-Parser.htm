@@ -6,8 +6,8 @@
   <style>
     body { margin:0; background:#000; width:100vw; height:100vh; display:flex; flex-direction:column; }
     #videoTitle { color:#fff; padding:10px; }
-    #selectorBar { background:#111; color:#fff; padding:10px; display:flex; gap:20px; }
-    select { padding:6px; }
+    #selectorBar { background:#111; color:#fff; padding:10px; display:flex; gap:20px; flex-wrap:wrap; }
+    select, button { padding:6px; margin:2px; }
     video { width:100%; height:100%; background:#000; }
     #subtitleOverlay {
       position: fixed;
@@ -17,13 +17,16 @@
       z-index: 9999;
       pointer-events: none;
       display: none;
-      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+      transition: opacity 0.3s ease-in-out;
       max-width: 60%;
       max-height: 25%;
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
       border-radius: 6px;
       background-color: rgba(0,0,0,0.2);
     }
+    #controls { background:#222; padding:10px; display:flex; gap:10px; justify-content:center; }
+    #controls button { background:#444; color:#fff; border:none; padding:8px 12px; cursor:pointer; border-radius:4px; }
+    #controls button:hover { background:#666; }
   </style>
 </head>
 <body>
@@ -41,6 +44,12 @@
   </div>
   <video id="video" controls></video>
   <img id="subtitleOverlay">
+  <div id="controls">
+    <button id="playPause">▶️/⏸️</button>
+    <button id="stop">⏹️</button>
+    <button id="mute">🔇/🔊</button>
+    <button id="fullscreen">⛶</button>
+  </div>
   <div id="videoTitle"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -52,9 +61,7 @@ const subtitleSelector = document.getElementById('subtitleSelector');
 const subtitleOverlay = document.getElementById('subtitleOverlay');
 
 let bdnSubtitles = [];
-let currentBDN = [];
 let activeCDN = null;
-let metadata = null;
 
 function timecodeToVTT(tc) {
   const [hh, mm, ss, ff] = tc.split(":").map(Number);
@@ -99,7 +106,7 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn) {
   track.default = true;
   video.appendChild(track);
 
-  return { folder, videoId, cdn };
+  activateBDNOverlay(folder, videoId, cdn);
 }
 
 function activateBDNOverlay(folder, videoId, cdn) {
@@ -122,7 +129,7 @@ function activateBDNOverlay(folder, videoId, cdn) {
   });
 }
 
-// ตัวอย่าง initPlayer (คุณสามารถเชื่อมกับ Parser Movie/Series ได้)
+// ตัวอย่าง initPlayer
 async function initPlayer(videoURL, videoId, cdn) {
   activeCDN = cdn;
   if (Hls.isSupported()) {
@@ -161,9 +168,22 @@ async function initPlayer(videoURL, videoId, cdn) {
   }
 }
 
+// ปุ่มควบคุม
+document.getElementById("playPause").onclick = () => {
+  if(video.paused) video.play(); else video.pause();
+};
+document.getElementById("stop").onclick = () => {
+  video.pause(); video.currentTime = 0;
+};
+document.getElementById("mute").onclick = () => {
+  video.muted = !video.muted;
+};
+document.getElementById("fullscreen").onclick = () => {
+  if(video.requestFullscreen) video.requestFullscreen();
+};
+
 window.onload = () => {
   // ตัวอย่างการเรียก initPlayer
-  // สมมติว่ามี videoURL, videoId, cdn จาก Parser
   const videoURL = "https://api.doo-nang.com/video/xxxx/playlist.m3u8";
   const videoId = "xxxx";
   const cdn = "statics-01.duckduckcdn.com";
