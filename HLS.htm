@@ -87,8 +87,6 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
   return {folder};
 }
 
-// --- Subtitle Rendering ---
-const bdnSubtitles=[];
 function renderSubtitleMenu(subtitles){
   const video=document.getElementById("video");
   const subtitleSelector=document.getElementById("subtitleSelector");
@@ -134,10 +132,39 @@ function renderSubtitleMenu(subtitles){
     // ถ้าเป็น BDN
     const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected);
     if(bdnEntry){
-      const { folder }=await loadBDNAsVTT(bdnEntry.src.replace("/index.xml",""), bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
+      const { folder }=await loadBDNAsVTT(
+        bdnEntry.src.replace("/index.xml",""),
+        bdnEntry.videoId,
+        bdnEntry.cdn,
+        bdnEntry.lang
+      );
       activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
     }
   };
+}
+
+function activateBDNOverlay(folder,videoId,cdn,lang){
+  const track=Array.from(video.textTracks).find(
+    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+  );
+  if(!track) return;
+  track.mode="hidden";
+
+  video.addEventListener("timeupdate",()=>{
+    const cue=Array.from(track.activeCues||[])[0];
+    if(cue&&cue.text.trim()){
+      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.src=imgURL;
+      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
+      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
+      subtitleOverlay.style.display="block";
+      subtitleOverlay.style.opacity="1";
+    } else {
+      subtitleOverlay.style.opacity="0";
+      subtitleOverlay.style.display="none";
+    }
+  });
 }
 
 // --- Responsive Overlay ---
