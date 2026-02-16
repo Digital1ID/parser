@@ -364,6 +364,7 @@ function initPlayer(videoURL){
     hls.loadSource(videoURL);
 
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+      // ✅ โหลด Audio Tracks
       audioSelector.innerHTML='';
       hls.audioTracks.forEach((track,i)=>{
         const opt=document.createElement("option");
@@ -373,6 +374,7 @@ function initPlayer(videoURL){
       });
       audioSelector.onchange=()=>{ hls.audioTrack=parseInt(audioSelector.value); };
 
+      // ✅ โหลด Quality Levels
       qualitySelector.innerHTML='<option value="-1">Auto</option>';
       hls.levels.forEach((level,i)=>{
         const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
@@ -392,6 +394,21 @@ window.onload = async () => {
   const type = params.get("type");
   const ids = params.get("ids");
 
+  // ✅ Movie Parser
+  if(type==="movie" && ids){
+    const movieId = parseInt(ids,10);
+    const movie = await fetchMovieById(movieId);
+
+    if(movie){
+      initPlayer(movie.video);
+      renderSubtitleMenu(movie.subtitle);
+      document.getElementById("videoTitle").innerText = movie.title;
+    } else {
+      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
+    }
+  }
+
+  // ✅ Series Parser
   if(type==="series" && ids){
     const parts = ids.split("/");
     const showId = parseInt(parts[0]);
@@ -413,7 +430,7 @@ window.onload = async () => {
 
       Object.keys(seasonMap).forEach(seasonNoKey=>{
         const opt=document.createElement("option");
-        opt.value=`?type=series&ids=${showId}/${seasonNoKey}/1`; // ✅ ฝัง href ใน option
+        opt.value=`?type=series&ids=${showId}/${seasonNoKey}/1`;
         opt.text=`Season ${seasonNoKey}`;
         seasonSelect.appendChild(opt);
       });
@@ -422,7 +439,7 @@ window.onload = async () => {
         episodeSelect.innerHTML="";
         seasonMap[seasonNo].forEach(ep=>{
           const opt=document.createElement("option");
-          opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`; // ✅ ฝัง href ใน option
+          opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
           opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
           episodeSelect.appendChild(opt);
         });
