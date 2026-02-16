@@ -413,7 +413,8 @@ window.onload = async () => {
 
       Object.keys(seasonMap).forEach(seasonNoKey=>{
         const opt=document.createElement("option");
-        opt.value=seasonNoKey; opt.text=`Season ${seasonNoKey}`;
+        opt.value=`?type=series&ids=${showId}/${seasonNoKey}/1`; // ✅ ฝัง href ใน option
+        opt.text=`Season ${seasonNoKey}`;
         seasonSelect.appendChild(opt);
       });
 
@@ -421,7 +422,7 @@ window.onload = async () => {
         episodeSelect.innerHTML="";
         seasonMap[seasonNo].forEach(ep=>{
           const opt=document.createElement("option");
-          opt.value=ep.episodeNo;
+          opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`; // ✅ ฝัง href ใน option
           opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
           episodeSelect.appendChild(opt);
         });
@@ -432,23 +433,13 @@ window.onload = async () => {
           initPlayer(epData.video);
           renderSubtitleMenu(epData.subtitle);
           document.getElementById("videoTitle").innerText = epData.title;
-          seasonSelect.value = seasonNo;
-          episodeSelect.value = targetEp.episodeNo;
+          seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
+          episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
         }
       }
 
-      seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
-      episodeSelect.addEventListener("change", async ()=>{
-        const seasonNo = seasonSelect.value;
-        const episodeNo = episodeSelect.value;
-        const ep = seasonMap[seasonNo].find(e => String(e.episodeNo) === episodeNo);
-        if(ep){
-          const epData = await processEpisode(ep);
-          initPlayer(epData.video);
-          renderSubtitleMenu(epData.subtitle);
-          document.getElementById("videoTitle").innerText = epData.title;
-        }
-      });
+      seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
+      episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
 
       // ✅ โหลดตามพารามิเตอร์ ids เช่น 1123/2/4
       await loadEpisodes(seasonNo, episodeNo);
