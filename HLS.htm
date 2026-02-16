@@ -18,7 +18,7 @@
       border-radius: 6px; background-color: rgba(0,0,0,0.2);
     }
     #controls { background:#111; color:#fff; padding:10px; display:flex; gap:20px; justify-content:center; }
-    select { padding:6px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius:4px; }
+    select, button { padding:6px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius:4px; }
     #videoTitle { color:#fff; padding:10px; text-align:center; }
     #selectorBar { background:#222; color:#fff; padding:10px; display:none; gap:20px; justify-content:center; }
   </style>
@@ -30,6 +30,12 @@
     <label>Audio: <select id="audioSelector"></select></label>
     <label>Quality: <select id="qualitySelector"></select></label>
     <label>Subtitle: <select id="subtitleSelector"><option value="none">No Subtitles</option></select></label>
+    <button id="playBtn">▶️ Play</button>
+    <button id="pauseBtn">⏸️ Pause</button>
+    <button id="muteBtn">🔊 Mute</button>
+    <button id="backwardBtn">⏪ -10s</button>
+    <button id="forwardBtn">⏩ +10s</button>
+    <button id="fullscreenBtn">Fullscreen</button>
   </div>
   <div id="selectorBar">
     <label>Season: <select id="seasonSelect"></select></label>
@@ -91,6 +97,7 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
 const bdnSubtitles=[];
 function renderSubtitleMenu(subtitles){
   const video=document.getElementById("video");
+  const subtitleOverlay=document.getElementById("subtitleOverlay");
   const subtitleSelector=document.getElementById("subtitleSelector");
   subtitleSelector.innerHTML='<option value="none">No Subtitles</option>';
   bdnSubtitles.length=0;
@@ -309,6 +316,29 @@ window.onload = async () => {
     }
   }
 };
+</script>
+<script>
+  // --- ปุ่มควบคุมหลัก ---
+document.getElementById("playBtn").addEventListener("click",()=>video.play());
+document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
+document.getElementById("muteBtn").addEventListener("click",()=>{
+  video.muted=!video.muted;
+  document.getElementById("muteBtn").textContent=video.muted?"🔇 Unmute":"🔊 Mute";
+});
+document.getElementById("forwardBtn").addEventListener("click",()=>video.currentTime+=10);
+document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
+// --- Fullscreen Button --- 
+  const fullscreenBtn=document.getElementById("fullscreenBtn"); 
+  fullscreenBtn.addEventListener("click",()=>{ 
+    if(!document.fullscreenElement){ 
+      document.body.requestFullscreen(); 
+    } else { 
+      document.exitFullscreen(); 
+    } 
+  }); 
+  document.addEventListener("fullscreenchange",()=>{ 
+    fullscreenBtn.textContent=document.fullscreenElement?"Exit Fullscreen":"Fullscreen"; 
+  }); 
 </script>
 </body>
 </html>
