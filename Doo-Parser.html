@@ -175,7 +175,7 @@ if (ep.video?.subtitleMetadata) {
 // --- Setup JWPlayer ---
 async function setupPlayer(data){
   document.getElementById("videoTitle").innerText=data.title;
-  const playerConfig={ width:"100%", height:"100%", aspectratio:"16:9", playlist:[{ file:data.video, tracks:[] }], primary:"html5", hlshtml:true, controls:true, autostart:true };
+  const playerConfig={ width:"100%", height:"100%", aspectratio:"16:9", playlist:[{ file:data.video, tracks:[] }], primary:"html5", hlshtml:true, controls:true, autostart:false };
   
   document.querySelectorAll(".subtitle-overlay").forEach(el=>el.remove());
 
