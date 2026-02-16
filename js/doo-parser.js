@@ -59,7 +59,7 @@ async function processEpisode(ep) {
 }
 
 // --- Subtitle Rendering ---
-function renderSubtitleMenu(metadata, videoId, cdn) {
+function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
   const video = document.getElementById("video");
   const subtitleSelector = document.getElementById("subtitleSelector");
   subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
@@ -74,11 +74,13 @@ function renderSubtitleMenu(metadata, videoId, cdn) {
         opt.text = lang.toUpperCase();
         subtitleSelector.appendChild(opt);
 
-        // ใช้ตัวเดียวกัน: ถ้า pathName เป็น URL เต็ม → ใช้ตรง ๆ
-        // ถ้าไม่ใช่ → ประกอบด้วย CDN + pathName
-        let srcUrl = entry.pathName.startsWith("http")
-          ? entry.pathName
-          : `https://${cdn}/${entry.pathName}`;
+        // ใช้ UUID เดียวกันเสมอ
+        let srcUrl;
+        if(entry.pathName.startsWith("http")){
+          srcUrl = entry.pathName; // API ส่งมาเป็น URL เต็ม
+        } else {
+          srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}.vtt`;
+        }
 
         if(entry.codec === "VTT"){
           const track = document.createElement("track");
@@ -90,8 +92,8 @@ function renderSubtitleMenu(metadata, videoId, cdn) {
         }
 
         if(entry.codec === "BDN"){
-          const subtitleURL = srcUrl.replace(".vtt","/index.xml");
-          loadBDNAsVTT(subtitleURL.replace("/index.xml",""), videoId, cdn);
+          const subtitleURL = `https://${cdn}/${transcodeUuid}/${entry.pathName}/index.xml`;
+          loadBDNAsVTT(subtitleURL.replace("/index.xml",""), transcodeUuid, cdn);
         }
       }
     });
