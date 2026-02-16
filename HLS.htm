@@ -87,6 +87,8 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
   return {folder};
 }
 
+// --- Subtitle Rendering ---
+const bdnSubtitles=[];
 function renderSubtitleMenu(subtitles){
   const video=document.getElementById("video");
   const subtitleSelector=document.getElementById("subtitleSelector");
@@ -132,17 +134,13 @@ function renderSubtitleMenu(subtitles){
     // ถ้าเป็น BDN
     const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected);
     if(bdnEntry){
-      const { folder }=await loadBDNAsVTT(
-        bdnEntry.src.replace("/index.xml",""),
-        bdnEntry.videoId,
-        bdnEntry.cdn,
-        bdnEntry.lang
-      );
+      const { folder }=await loadBDNAsVTT(bdnEntry.src.replace("/index.xml",""), bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
       activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
     }
   };
 }
 
+// --- Responsive Overlay ---
 function activateBDNOverlay(folder,videoId,cdn,lang){
   const track=Array.from(video.textTracks).find(
     t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
