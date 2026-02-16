@@ -151,14 +151,22 @@ async function processEpisode(ep) {
   if(transcodeUuid && cdnHostname){
     const base=`https://${cdnHostname}/${transcodeUuid}`;
     videoUrl=`https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
-    if(ep.video?.subtitleMetadata){
-      for(const [lang,subs] of Object.entries(ep.video.subtitleMetadata)){
-        for(const sub of subs){
-          const src=`${base}/${sub.pathName}`;
-          if(await checkSubtitleExists(src+(sub.codec==="BDN"?"/index.xml":`.${sub.codec.toLowerCase()}`))) subtitle.push({lang,codec:sub.codec,src});
+if (ep.video?.subtitleMetadata) {
+  for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
+    for (const sub of subs) {
+      let src;
+      if (sub.codec === "VTT") {
+        src = `${base}/${sub.pathName}.vtt`;
+        subtitle.push({ lang, codec: sub.codec, src });
+      } else if (sub.codec === "BDN") {
+        src = `${base}/${sub.pathName}`;
+        if (await checkSubtitleExists(`${src}/index.xml`)) {
+          subtitle.push({ lang, codec: sub.codec, src });
         }
       }
     }
+  }
+}
     try{const res=await fetch(videoUrl); if(res.ok) audioTracks=extractAudioTracks(await res.text());}catch{}
   }
   return { season:ep.seasonNo, episode:ep.episodeNo, title:ep.titleTh||ep.titleEn||`EP${ep.episodeNo}`, video:videoUrl, subtitle, audioTracks };
