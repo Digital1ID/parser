@@ -82,6 +82,7 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
   track.label = lang.toUpperCase();
   track.srclang = lang;
   track.src = vttUrl;
+  track.mode = "hidden"; // ✅ ให้ cue โหลดทันที
   video.appendChild(track);
 
   return {folder};
@@ -144,41 +145,13 @@ function renderSubtitleMenu(subtitles){
 }
 
 function activateBDNOverlay(folder,videoId,cdn,lang){
-  const track=Array.from(video.textTracks).find(
-    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
-  );
+  const track=Array.from(video.textTracks).find(t=>t.srclang===lang);
   if(!track) return;
-  track.mode="hidden";
 
   video.addEventListener("timeupdate",()=>{
     const cue=Array.from(track.activeCues||[])[0];
-    if(cue&&cue.text.trim()){
-      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
-      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
-      subtitleOverlay.src=imgURL;
-      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
-      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
-      subtitleOverlay.style.display="block";
-      subtitleOverlay.style.opacity="1";
-    } else {
-      subtitleOverlay.style.opacity="0";
-      subtitleOverlay.style.display="none";
-    }
-  });
-}
-
-// --- Responsive Overlay ---
-function activateBDNOverlay(folder,videoId,cdn,lang){
-  const track=Array.from(video.textTracks).find(
-    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
-  );
-  if(!track) return;
-  track.mode="hidden";
-
-  video.addEventListener("timeupdate",()=>{
-    const cue=Array.from(track.activeCues||[])[0];
-    if(cue&&cue.text.trim()){
-      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+    if(cue && cue.text.trim()){
+      const imgName=cue.text.trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
