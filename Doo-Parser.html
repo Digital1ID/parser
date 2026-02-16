@@ -149,7 +149,7 @@ async function processEpisode(ep) {
     if(ep.video?.subtitleMetadata){
       for(const [lang,subs] of Object.entries(ep.video.subtitleMetadata)){
         for(const sub of subs){
-          const src=`${base}/${sub.pathName}`;
+          const src=`${base}/${sub.pathName}.vtt`;
           if(await checkSubtitleExists(src+(sub.codec==="BDN"?"/index.xml":`.${sub.codec.toLowerCase()}`))) subtitle.push({lang,codec:sub.codec,src});
         }
       }
