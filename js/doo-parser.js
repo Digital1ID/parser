@@ -1,4 +1,24 @@
-// --- GraphQL Fetch ---
+// --- Utilities ---
+async function checkSubtitleExists(url) {
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function extractAudioTracks(m3uText) {
+  const tracks = [];
+  const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="(.*?)".*?NAME="(.*?)".*?URI="(.*?)"/g;
+  let match;
+  while ((match = regex.exec(m3uText)) !== null) {
+    tracks.push({ lang: match[1], name: match[2], uri: match[3] });
+  }
+  return tracks;
+}
+
+// --- Movie Parser ---
 async function fetchMovieById(movieId) {
   const query = `
     query getMovie($id: Int!) {
@@ -8,23 +28,42 @@ async function fetchMovieById(movieId) {
       }
     }
   `;
-  const res = await fetch("https://api.doo-nang.com/graphql", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ query, variables:{ id: movieId } })
+  const response = await fetch("https://api.doo-nang.com/graphql", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables: { id: movieId } })
   });
-  const result = await res.json();
+  const result = await response.json();
   const movie = result?.data?.movie;
-  if(!movie) return null;
+  if (!movie) return null;
 
-  return {
-    id: movie.id,
-    title: movie.titleTh || movie.titleEn,
-    video: `https://api.doo-nang.com/video/${movie.video.transcodeUuid}/playlist.m3u8`,
-    cdnHostname: movie.video.cdnHostname,
-    subtitleMetadata: movie.video.subtitleMetadata
-  };
+  const transcodeUuid = movie.video?.transcodeUuid;
+  const cdnHostname = movie.video?.cdnHostname;
+  let videoUrl = "", subtitle = [], audioTracks = [];
+
+  if (transcodeUuid && cdnHostname) {
+    const base = `https://${cdnHostname}/${transcodeUuid}`;
+    videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
+
+    if (movie.video?.subtitleMetadata) {
+      for (const [lang, subs] of Object.entries(movie.video.subtitleMetadata)) {
+        for (const sub of subs) {
+          let src;
+          if (sub.codec === "VTT") src = `${base}/${sub.pathName}.vtt`;
+          else if (sub.codec === "BDN") src = `${base}/${sub.pathName}/index.xml`;
+          if (await checkSubtitleExists(src)) subtitle.push({ lang, codec: sub.codec, src });
+        }
+      }
+    }
+    try {
+      const res = await fetch(videoUrl);
+      if (res.ok) audioTracks = extractAudioTracks(await res.text());
+    } catch {}
+  }
+
+  return { id: movie.id, title: movie.titleTh || movie.titleEn, video: videoUrl, subtitle, audioTracks };
 }
 
+// --- Series Parser ---
 async function fetchSeriesById(showId) {
   const query = `
     query getShow($id: Int!) {
@@ -37,71 +76,66 @@ async function fetchSeriesById(showId) {
       }
     }
   `;
-  const res = await fetch("https://api.doo-nang.com/graphql", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ query, variables:{ id: showId } })
+  const response = await fetch("https://api.doo-nang.com/graphql", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables: { id: showId } })
   });
-  const result = await res.json();
+  const result = await response.json();
   return result?.data?.show || null;
 }
 
 async function processEpisode(ep) {
   const transcodeUuid = ep.video?.transcodeUuid;
   const cdnHostname = ep.video?.cdnHostname;
-  return {
-    season: ep.seasonNo,
-    episode: ep.episodeNo,
-    title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`,
-    video: `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`,
-    cdnHostname,
-    subtitleMetadata: ep.video?.subtitleMetadata
-  };
+  let videoUrl = "", subtitle = [], audioTracks = [];
+
+  if (transcodeUuid && cdnHostname) {
+    const base = `https://${cdnHostname}/${transcodeUuid}`;
+    videoUrl = `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
+
+    if (ep.video?.subtitleMetadata) {
+      for (const [lang, subs] of Object.entries(ep.video.subtitleMetadata)) {
+        for (const sub of subs) {
+          let src;
+          if (sub.codec === "VTT") src = `${base}/${sub.pathName}.vtt`;
+          else if (sub.codec === "BDN") src = `${base}/${sub.pathName}/index.xml`;
+          if (await checkSubtitleExists(src)) subtitle.push({ lang, codec: sub.codec, src });
+        }
+      }
+    }
+    try {
+      const res = await fetch(videoUrl);
+      if (res.ok) audioTracks = extractAudioTracks(await res.text());
+    } catch {}
+  }
+
+  return { season: ep.seasonNo, episode: ep.episodeNo, title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`, video: videoUrl, subtitle, audioTracks };
 }
 
 // --- Subtitle Rendering ---
-function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
+function renderSubtitleMenu(subtitles) {
   const video = document.getElementById("video");
   const subtitleSelector = document.getElementById("subtitleSelector");
   subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
 
-  if(!metadata) return;
+  subtitles.forEach(sub => {
+    const opt = document.createElement("option");
+    opt.value = sub.lang;
+    opt.text = sub.lang.toUpperCase() + " (" + sub.codec + ")";
+    subtitleSelector.appendChild(opt);
 
-  for (const lang in metadata) {
-    metadata[lang].forEach(entry => {
-      if (!entry.error) {
-        const opt = document.createElement("option");
-        opt.value = lang;
-        opt.text = lang.toUpperCase();
-        subtitleSelector.appendChild(opt);
-
-        let srcUrl;
-        if(entry.pathName.startsWith("http")){
-          // API ส่งมาเป็น URL เต็ม
-          srcUrl = entry.pathName;
-        } else {
-          // ใช้ uuid + pathName เสมอ
-          if(entry.codec === "VTT"){
-            srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}.vtt`;
-          } else if(entry.codec === "BDN"){
-            srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}/index.xml`;
-          }
-        }
-
-        if(entry.codec === "VTT"){
-          const track = document.createElement("track");
-          track.kind = "subtitles";
-          track.label = lang.toUpperCase();
-          track.srclang = lang;
-          track.src = srcUrl;
-          video.appendChild(track);
-        }
-
-        if(entry.codec === "BDN"){
-          loadBDNAsVTT(srcUrl.replace("/index.xml",""), transcodeUuid, cdn);
-        }
-      }
-    });
-  }
+    if (sub.codec === "VTT") {
+      const track = document.createElement("track");
+      track.kind = "subtitles";
+      track.label = sub.lang.toUpperCase();
+      track.srclang = sub.lang;
+      track.src = sub.src;
+      video.appendChild(track);
+    }
+    if (sub.codec === "BDN") {
+      loadBDNAsVTT(sub.src.replace("/index.xml",""), sub.lang);
+    }
+  });
 
   subtitleSelector.onchange = () => {
     const selected = subtitleSelector.value;
@@ -113,7 +147,7 @@ function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
 }
 
 // --- Player Init ---
-function initPlayer(videoURL, videoId, cdn) {
+function initPlayer(videoURL) {
   const video = document.getElementById("video");
   const audioSelector = document.getElementById("audioSelector");
   const qualitySelector = document.getElementById("qualitySelector");
@@ -124,7 +158,6 @@ function initPlayer(videoURL, videoId, cdn) {
     hls.loadSource(videoURL);
 
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      // Audio
       audioSelector.innerHTML = '';
       hls.audioTracks.forEach((track,i)=>{
         const opt=document.createElement("option");
@@ -133,7 +166,6 @@ function initPlayer(videoURL, videoId, cdn) {
       });
       audioSelector.onchange=()=>{ hls.audioTrack=parseInt(audioSelector.value); };
 
-      // Quality
       qualitySelector.innerHTML='<option value="-1">Auto</option>';
       hls.levels.forEach((level,i)=>{
         const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
@@ -148,12 +180,6 @@ function initPlayer(videoURL, videoId, cdn) {
   }
 }
 
-// --- Controls ---
-document.getElementById("playPause").onclick=()=>{ const v=document.getElementById("video"); if(v.paused) v.play(); else v.pause(); };
-document.getElementById("stop").onclick=()=>{ const v=document.getElementById("video"); v.pause(); v.currentTime=0; };
-document.getElementById("mute").onclick=()=>{ const v=document.getElementById("video"); v.muted=!v.muted; };
-document.getElementById("fullscreen").onclick=()=>{ const v=document.getElementById("video"); if(v.requestFullscreen) v.requestFullscreen(); };
-
 // --- Init Page ---
 window.onload = async () => {
   const params = new URLSearchParams(window.location.search);
@@ -163,8 +189,8 @@ window.onload = async () => {
   if(type==="movie" && ids){
     const movie = await fetchMovieById(parseInt(ids,10));
     if(movie){
-      initPlayer(movie.video, movie.id, movie.cdnHostname);
-      renderSubtitleMenu(movie.subtitleMetadata, movie.id, movie.cdnHostname);
+      initPlayer(movie.video);
+      renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
@@ -198,29 +224,36 @@ window.onload = async () => {
           opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
           episodeSelect.appendChild(opt);
         });
+
+        // โหลดตอนแรกของ season ที่เลือก
         const firstEp = seasonMap[seasonNo][0];
         const epData = await processEpisode(firstEp);
-        initPlayer(epData.video, epData.episode, epData.cdnHostname);
-        renderSubtitleMenu(epData.subtitleMetadata, epData.episode, epData.cdnHostname);
+        initPlayer(epData.video);
+        renderSubtitleMenu(epData.subtitle);
         document.getElementById("videoTitle").innerText = epData.title;
       }
 
+      // เมื่อเปลี่ยน season
       seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
+
+      // เมื่อเปลี่ยน episode
       episodeSelect.addEventListener("change", async ()=>{
         const seasonNo = seasonSelect.value;
         const episodeNo = episodeSelect.value;
         const ep = seasonMap[seasonNo].find(e => String(e.episodeNo) === episodeNo);
         if(ep){
           const epData = await processEpisode(ep);
-          initPlayer(epData.video, epData.episode, epData.cdnHostname);
-          renderSubtitleMenu(epData.subtitleMetadata, epData.episode, epData.cdnHostname);
+          initPlayer(epData.video);
+          renderSubtitleMenu(epData.subtitle);
           document.getElementById("videoTitle").innerText = epData.title;
         }
       });
 
+      // โหลด season แรกโดยอัตโนมัติ
       const firstSeason = Object.keys(seasonMap)[0];
       seasonSelect.value = firstSeason;
       await loadEpisodes(firstSeason);
+
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลซีรีส์";
     }
