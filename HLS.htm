@@ -2,67 +2,31 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Custom HLS Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
-<style>
-  body {
-    margin:0; background:#000; width:100vw; height:100vh;
-    display:flex; flex-direction:column; font-family:Arial, sans-serif;
-  }
-  video {
-    flex:1; width:100%; height:100%; object-fit:contain;
-    background:#000;
-  }
-  #subtitleOverlay {
-    position: fixed; z-index: 9999; pointer-events: none;
-    display: none; opacity: 0;
-    transition: opacity 0.4s ease, transform 0.3s ease;
-    max-width: 60%; max-height: 25%;
-    left: 50%; bottom: 8%; transform: translateX(-50%);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
-    border-radius: 6px; background-color: rgba(0,0,0,0.2);
-  }
-  #controls {
-    background:#111; color:#fff; padding:12px;
-    display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
-    border-top:1px solid #333;
-  }
-  select, button {
-    padding:8px 14px;
-    background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.25);
-    color:#fff; border-radius:6px;
-    cursor:pointer; transition:all 0.25s ease;
-    font-size:14px;
-  }
-  select:hover, button:hover {
-    background:rgba(255,255,255,0.2);
-    border-color:#fff;
-    transform:scale(1.05);
-  }
-  button:active {
-    transform:scale(0.95);
-  }
-  #videoTitle {
-    color:#fff; padding:10px; text-align:center;
-    font-size:16px; font-weight:bold;
-  }
-</style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body { margin:0; background:#000; width:100vw; height:100vh; display:flex; flex-direction:column; font-family:Arial, sans-serif; }
+    video { flex:1; width:100%; height:100%; object-fit:contain; background:#000; }
+    #subtitleOverlay { position: fixed; z-index: 9999; pointer-events: none; display: none; opacity: 0; transition: opacity 0.4s ease; max-width: 60%; max-height: 25%; left: 50%; bottom: 8%; transform: translateX(-50%); }
+    #controls { background:#111; color:#fff; padding:12px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; border-top:1px solid #333; }
+    select, button { padding:8px 14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:6px; cursor:pointer; }
+    #videoTitle { color:#fff; padding:10px; text-align:center; font-size:16px; font-weight:bold; }
+    #selectorBar { display:none; background:#222; color:#fff; padding:8px; justify-content:center; gap:10px; }
+  </style>
 </head>
 <body>
-  <video id="video" autoplay crossorigin="anonymous"></video>
+  <video id="video" autoplay controls crossorigin="anonymous"></video>
   <img id="subtitleOverlay" />
   <div id="controls">
-    <label>Audio: <select id="audioSelector"></select></label>
-    <label>Quality: <select id="qualitySelector"></select></label>
-    <label>Subtitle: <select id="subtitleSelector"><option value="none">No Subtitles</option></select></label>
     <button id="playBtn">▶️ Play</button>
     <button id="pauseBtn">⏸️ Pause</button>
     <button id="muteBtn">🔊 Mute</button>
     <button id="backwardBtn">⏪ -10s</button>
     <button id="forwardBtn">⏩ +10s</button>
     <button id="fullscreenBtn">⛶ Fullscreen</button>
+    <label>Audio: <select id="audioSelector"></select></label>
+    <label>Quality: <select id="qualitySelector"></select></label>
+    <label>Subtitle: <select id="subtitleSelector"><option value="none">No Subtitles</option></select></label>
   </div>
   <div id="selectorBar">
     <label>Season: <select id="seasonSelect"></select></label>
@@ -392,23 +356,14 @@ window.onload = async () => {
   const type = params.get("type");
   const ids = params.get("ids");
 
-  if(type==="movie" && ids){
-    const movie = await fetchMovieById(parseInt(ids,10));
-    if(movie){
-      initPlayer(movie.video);
-      renderSubtitleMenu(movie.subtitle);
-      document.getElementById("videoTitle").innerText = movie.title;
-    } else {
-      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
-    }
-  } else if(type==="series" && ids){
-    const showId = parseInt(ids.split("/")[0]);
-    const seasonNo = parseInt(ids.split("/")[1]);
-    const episodeNo = parseInt(ids.split("/")[2]);
+  if(type==="series" && ids){
+    const parts = ids.split("/");
+    const showId = parseInt(parts[0]);
+    const seasonNo = parts[1] ? parseInt(parts[1]) : 1;
+    const episodeNo = parts[2] ? parseInt(parts[2]) : 1;
 
     const show = await fetchSeriesById(showId);
     if(show){
-      document.title = `${show.titleTh} (${show.titleEn})`;
       const seasonSelect=document.getElementById("seasonSelect");
       const episodeSelect=document.getElementById("episodeSelect");
       const selectorBar=document.getElementById("selectorBar");
@@ -420,36 +375,31 @@ window.onload = async () => {
         seasonMap[ep.seasonNo].push(ep);
       });
 
-      Object.keys(seasonMap).forEach(seasonNo=>{
+      Object.keys(seasonMap).forEach(seasonNoKey=>{
         const opt=document.createElement("option");
-        opt.value=seasonNo; opt.text=`Season ${seasonNo}`;
+        opt.value=seasonNoKey; opt.text=`Season ${seasonNoKey}`;
         seasonSelect.appendChild(opt);
       });
 
-async function loadEpisodes(seasonNo, episodeNo=null){
-  episodeSelect.innerHTML="";
-  seasonMap[seasonNo].forEach(ep=>{
-    const opt=document.createElement("option");
-    opt.value=ep.episodeNo;
-    opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
-    episodeSelect.appendChild(opt);
-  });
+      async function loadEpisodes(seasonNo, episodeNo=null){
+        episodeSelect.innerHTML="";
+        seasonMap[seasonNo].forEach(ep=>{
+          const opt=document.createElement("option");
+          opt.value=ep.episodeNo;
+          opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+          episodeSelect.appendChild(opt);
+        });
 
-  let targetEp = episodeNo 
-    ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) 
-    : seasonMap[seasonNo][0];
-
-  if(targetEp){
-    const epData = await processEpisode(targetEp);
-    initPlayer(epData.video);
-    renderSubtitleMenu(epData.subtitle);
-    document.getElementById("videoTitle").innerText = epData.title;
-
-    // ✅ เซ็ตค่า dropdown ให้ตรงกับพารามิเตอร์
-    seasonSelect.value = seasonNo;
-    episodeSelect.value = targetEp.episodeNo;
-  }
-}
+        let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
+        if(targetEp){
+          const epData = await processEpisode(targetEp);
+          initPlayer(epData.video);
+          renderSubtitleMenu(epData.subtitle);
+          document.getElementById("videoTitle").innerText = epData.title;
+          seasonSelect.value = seasonNo;
+          episodeSelect.value = targetEp.episodeNo;
+        }
+      }
 
       seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
       episodeSelect.addEventListener("change", async ()=>{
@@ -464,11 +414,8 @@ async function loadEpisodes(seasonNo, episodeNo=null){
         }
       });
 
-      // ✅ Auto-select จากพารามิเตอร์ ids เช่น 1123/4/1
+      // ✅ โหลดตามพารามิเตอร์ ids เช่น 1123/2/4
       await loadEpisodes(seasonNo, episodeNo);
-
-    } else {
-      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลซีรีส์";
     }
   }
 };
