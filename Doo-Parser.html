@@ -9,6 +9,17 @@
     #selectorBar { background:#111; color:#fff; padding:10px; display:none; gap:20px; }
     select { padding:6px; }
     #videoTitle { color:#fff; padding:10px; }
+    .subtitle-overlay {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+    }
+    .subtitle-overlay img {
+      max-width:80%;
+      border:2px solid #fff;
+    }
   </style>
 </head>
 <body>
@@ -21,7 +32,7 @@
   <div id="play"></div>
   <div id="videoTitle"></div>
 
-  <script src="https://digital1id.vercel.app/p2p/jw/jwplayer.js"></script>
+  <script src="jw/jwplayer.js"></script>
 <script>
 jwplayer.key = "eNFaXCjyURVoCCGiHp7HTQ3hDhE/AfL0g8VE1fRbL84=";
 
@@ -57,7 +68,11 @@ async function fetchMovieById(movieId) {
   if(transcodeUuid && cdnHostname){
     const base=`https://${cdnHostname}/${transcodeUuid}`;
     videoUrl=`https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
-    const subs=[{lang:"th",codec:"VTT",src:`${base}/sub_tha.vtt`},{lang:"en",codec:"VTT",src:`${base}/sub_eng.vtt`}];
+    const subs=[
+      {lang:"th",codec:"VTT",src:`${base}/sub_tha.vtt`},
+      {lang:"en",codec:"VTT",src:`${base}/sub_eng.vtt`},
+      {lang:"th",codec:"BDN",src:`${base}/sub_tha/index.xml`}
+    ];
     for(const s of subs) if(await checkSubtitleExists(s.src)) subtitle.push(s);
     try{const res=await fetch(videoUrl); if(res.ok) audioTracks=extractAudioTracks(await res.text());}catch{}
   }
@@ -109,8 +124,35 @@ async function processEpisode(ep) {
 function setupPlayer(data){
   document.getElementById("videoTitle").innerText=data.title;
   const playerConfig={ width:"100%", height:"100%", aspectratio:"16:9", playlist:[{ file:data.video, tracks:[] }], primary:"html5", hlshtml:true, controls:true, autostart:true };
-  data.subtitle.forEach(sub=>playerConfig.playlist[0].tracks.push({ file:sub.src, label:sub.lang.toUpperCase(), kind:"captions" }));
-  data.audioTracks.forEach(at=>playerConfig.playlist[0].tracks.push({ file:at.uri, label:at.language.toUpperCase()+" Audio", kind:"audio" }));
+  
+  // ลบ overlay subtitle เดิมก่อน
+  document.querySelectorAll(".subtitle-overlay").forEach(el=>el.remove());
+
+  data.subtitle.forEach(sub=>{
+    if(sub.src.endsWith(".vtt") || sub.src.endsWith(".xml")){
+      playerConfig.playlist[0].tracks.push({
+        file: sub.src,
+        label: sub.lang.toUpperCase(),
+        kind: "captions"
+      });
+    } else if(sub.src.endsWith(".jpg") || sub.src.endsWith(".png")){
+      const overlay=document.createElement("div");
+      overlay.className="subtitle-overlay";
+      overlay.innerHTML=`<img src="${sub.src}">`;
+      document.body.appendChild(overlay);
+      jwplayer("play").on("pause", ()=>overlay.style.display="none");
+      jwplayer("play").on("play", ()=>overlay.style.display="block");
+    }
+  });
+
+  data.audioTracks.forEach(at=>{
+    playerConfig.playlist[0].tracks.push({
+      file: at.uri,
+      label: at.language.toUpperCase()+" Audio",
+      kind: "audio"
+    });
+  });
+
   jwplayer("play").setup(playerConfig);
 }
 
@@ -133,7 +175,6 @@ async function initPage(){
     const selectorBar=document.getElementById("selectorBar");
     selectorBar.style.display="flex";
 
-    // Group episodes by season
     const seasonMap={};
     show.episodes.forEach(ep=>{
       if(!seasonMap[ep.seasonNo]) seasonMap[ep.seasonNo]=[];
@@ -159,10 +200,15 @@ async function initPage(){
     }
 
     seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
+
     episodeSelect.addEventListener("change", async ()=>{
-      const seasonNo=seasonSelect.value, episodeNo=episodeSelect.value;
-      const ep=seasonMap[seasonNo].find(e=>String(e.episodeNo)===episodeNo);
-      if(ep){ const epData=await processEpisode(ep); setupPlayer(epData); }
+      const seasonNo = seasonSelect.value;
+      const episodeNo = episodeSelect.value;
+      const ep = seasonMap[seasonNo].find(e => String(e.episodeNo) === episodeNo);
+      if(ep){
+        const epData = await processEpisode(ep);
+        setupPlayer(epData);
+      }
     });
 
     // โหลดซีซั่นแรกและตอนแรกโดยอัตโนมัติ
@@ -176,4 +222,3 @@ window.onload = initPage;
 </script>
 </body>
 </html>
-
