@@ -46,6 +46,71 @@ const subtitleSelector=document.getElementById("subtitleSelector");
 const seasonSelect=document.getElementById("seasonSelect");
 const episodeSelect=document.getElementById("episodeSelect");
 const selectorBar=document.getElementById("selectorBar");
+// เก็บรายการ BDN subtitle
+const bdnSubtitles = [];
+
+// โหลด subtitle metadata
+async function loadSubtitles(videoId, cdn, metadata) {
+  subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
+  for (const lang in metadata) {
+    metadata[lang].forEach(entry => {
+      if (!entry.error && entry.codec === "VTT") {
+        const src = `https://${cdn}/${videoId}/${entry.pathName}.vtt`;
+        addVTTSubtitle(src, lang);
+        const opt = document.createElement("option");
+        opt.value = lang;
+        opt.text = lang.toUpperCase();
+        subtitleSelector.appendChild(opt);
+      } else if (!entry.error && entry.codec === "BDN") {
+        const baseUrl = `https://${cdn}/${videoId}/${entry.pathName}`;
+        bdnSubtitles.push({ lang, baseUrl, videoId, cdn });
+        const opt = document.createElement("option");
+        opt.value = lang;
+        opt.text = lang.toUpperCase();
+        subtitleSelector.appendChild(opt);
+      }
+    });
+  }
+}
+
+// เพิ่ม VTT subtitle
+function addVTTSubtitle(src, lang) {
+  const track = document.createElement("track");
+  track.kind = "subtitles";
+  track.label = lang.toUpperCase();
+  track.srclang = lang;
+  track.src = src;
+  video.appendChild(track);
+}
+
+// เมื่อผู้ใช้เปลี่ยน subtitle
+subtitleSelector.onchange = async () => {
+  const selected = subtitleSelector.value;
+  localStorage.setItem("subtitleTrack", selected);
+
+  // ปิดทุก track
+  Array.from(video.textTracks).forEach(track => track.mode = "disabled");
+  subtitleOverlay.style.display = "none";
+  subtitleOverlay.style.opacity = "0";
+
+  if (selected === "none") return;
+
+  // ถ้าเป็น VTT
+  const vttTrack = Array.from(video.textTracks).find(
+    track => (track.language || track.srclang) === selected
+  );
+  if (vttTrack) {
+    vttTrack.mode = "showing";
+    return;
+  }
+
+  // ถ้าเป็น BDN
+  const bdnEntry = bdnSubtitles.find(sub => sub.lang === selected);
+  if (bdnEntry) {
+    const { folder } = await loadBDNAsVTT(bdnEntry.baseUrl, bdnEntry.videoId, bdnEntry.cdn);
+    activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn);
+  }
+};
 
 // Netflix-style shortcuts
 document.addEventListener("keydown",e=>{
@@ -57,49 +122,6 @@ document.addEventListener("keydown",e=>{
     case "m": video.muted=!video.muted; break;
   }
 });
-
-// --- Subtitle Handling ---
-async function addVTTSubtitle(src, lang) {
-  const track = document.createElement("track");
-  track.kind = "subtitles";
-  track.label = lang.toUpperCase();
-  track.srclang = lang;
-  track.src = src;
-  video.appendChild(track);
-}
-
-async function addBDNSubtitle(baseUrl, videoId, cdn, lang) {
-  const { folder } = await loadBDNAsVTT(baseUrl, videoId, cdn);
-  activateBDNOverlay(folder, videoId, cdn);
-  const opt = document.createElement("option");
-  opt.value = lang;
-  opt.text = lang.toUpperCase();
-  subtitleSelector.appendChild(opt);
-}
-
-// เมื่อผู้ใช้เปลี่ยน subtitle
-subtitleSelector.onchange = () => {
-  const selected = subtitleSelector.value;
-  Array.from(video.textTracks).forEach(track => track.mode = "disabled");
-  subtitleOverlay.style.display = "none";
-  subtitleOverlay.style.opacity = "0";
-
-  if (selected === "none") return;
-
-  const vttTrack = Array.from(video.textTracks).find(
-    track => (track.language || track.srclang) === selected
-  );
-  if (vttTrack) {
-    vttTrack.mode = "showing";
-    return;
-  }
-
-  // ถ้าเป็น BDN → overlay
-  const bdnEntry = bdnSubtitles.find(sub => sub.lang === selected);
-  if (bdnEntry) {
-    activateBDNOverlay(bdnEntry.folder, bdnEntry.videoId, bdnEntry.cdn);
-  }
-};
 
 // GraphQL Parsers
 async function fetchMovieById(movieId){
