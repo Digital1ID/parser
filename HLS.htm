@@ -70,7 +70,6 @@
   </div>
   <div id="videoTitle"></div>
 
-<!-- Script Part 1: Utilities + Parsers + Subtitle Handling -->
 <script>
 // --- Utilities ---
 async function checkSubtitleExists(url){ 
@@ -335,6 +334,19 @@ async function loadEpisode(ep){
 
   // อัปเดตชื่อเรื่อง
   document.getElementById("videoTitle").textContent = episodeData.title;
+}
+
+// --- Load Series Episode by ids param ---
+async function loadSeriesEpisode(showId, seasonNo, episodeNo){
+  const series = await fetchSeriesById(showId);
+  if(!series) return;
+
+  const ep = series.episodes.find(
+    e => e.seasonNo === seasonNo && e.episodeNo === episodeNo
+  );
+  if(!ep) return;
+
+  await loadEpisode(ep);
 }
 </script>
 
