@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>รับชมภาพยนตร์ - Doo-Nang</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+  <style>
+    body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; }
+    .video-container { position:relative; width:100%; height:100vh; display:flex; justify-content:center; align-items:center; background:#000; overflow:hidden; }
+    video { max-width:100%; max-height:100vh; object-fit:contain; }
+    .floating-title { position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.2); color:#fff; padding:.3rem .8rem; border-radius:6px; font-size:0.9rem; z-index:10; }
+    .back-btn { position:absolute; top:20px; left:20px; background:rgba(255,255,255,0.2); color:#fff; padding:6px 12px; border-radius:5px; cursor:pointer; z-index:40; }
+    .sidebar { position:fixed; right:-250px; width:220px; height:80%; background:rgba(0,0,0,0.9); padding:10px; transition:right .3s ease; overflow-y:auto; z-index:30; }
+    .sidebar.active { right:0; }
+    .sidebar h2 { color:#fff; font-size:0.9rem; margin:0 0 10px; }
+    .sidebar button { display:block; width:100%; margin:5px 0; padding:8px; background:#e53e3e; color:#fff; border:none; border-radius:5px; cursor:pointer; text-align:left; }
+    .sidebar button:hover { background:#c53030; }
+    .toggle-btn { position:absolute; top:20px; left:100px; background:rgba(229,62,62,0.9); color:#fff; padding:6px 12px; border-radius:5px; cursor:pointer; z-index:40; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <video id="player" playsinline controls></video>
+    <div class="floating-title" id="floatingTitle">กำลังโหลด...</div>
+    <div class="toggle-btn" id="toggleSidebar">🎬 ตัวเลือก</div>
+    <div class="back-btn" id="backBtn">⬅ กลับ</div>
+    <div class="sidebar" id="sidebar">
+      <h2 id="movieTitle">ชื่อเรื่อง</h2>
+      <h3 style="color:#fff;">Subtitles</h3>
+      <div id="subtitleList"></div>
+      <h3 style="color:#fff;">Audio Tracks</h3>
+      <div id="audioList"></div>
+    </div>
+  </div>
+
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<script>
+const player = new Plyr('#player');
+let wakeLock=null;
+
+// --- Convert BDN/XML → VTT ---
+async function convertBDNtoVTT(xmlUrl) {
+  const res = await fetch(xmlUrl);
+  const xmlText = await res.text();
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+  let vtt = "WEBVTT\n\n";
+  const events = xmlDoc.querySelectorAll("Event");
+
+  events.forEach((ev, i) => {
+    const start = parseInt(ev.getAttribute("InTC"), 10) || 0;
+    const end = parseInt(ev.getAttribute("OutTC"), 10) || start + 2000;
+    const text = ev.textContent.trim();
+
+    const fmt = ms => {
+      const h = String(Math.floor(ms/3600000)).padStart(2,"0");
+      const m = String(Math.floor((ms%3600000)/60000)).padStart(2,"0");
+      const s = String(Math.floor((ms%60000)/1000)).padStart(2,"0");
+      const msPart = String(ms%1000).padStart(3,"0");
+      return `${h}:${m}:${s}.${msPart}`;
+    };
+
+    vtt += `${i+1}\n${fmt(start)} --> ${fmt(end)}\n${text}\n\n`;
+  });
+
+  const blob = new Blob([vtt], { type: "text/vtt" });
+  return URL.createObjectURL(blob);
+}
+
+// --- Extract audio tracks from m3u8 ---
+function extractAudioTracks(m3u8Text) {
+  const audioTracks = [];
+  const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="([^"]+)".*?URI="([^"]+)"/g;
+  let match;
+  while ((match = regex.exec(m3u8Text)) !== null) {
+    audioTracks.push({ language: match[1], uri: match[2] });
+  }
+  return audioTracks;
+}
+
+// --- Parser GraphQL ---
+async function fetchMovieById(movieId){
+  const query=`query getMovie($id:Int!){movie(id:$id){id titleTh titleEn video{transcodeUuid cdnHostname}}}`;
+  const res=await fetch('https://api.doo-nang.com/graphql',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query,operationName:'getMovie',variables:{id:movieId}})
+  });
+  const result=await res.json();
+  return result?.data?.movie;
+}
+
+// --- Main ---
+(async function main(){
+  const params=new URLSearchParams(window.location.search);
+  const movieId=parseInt(params.get("movie_id")||"1",10);
+  const movie=await fetchMovieById(movieId);
+  if(!movie){ document.getElementById('floatingTitle').textContent="❌ ไม่พบข้อมูล"; return; }
+
+  const title=movie.titleTh||movie.titleEn;
+  document.title=`รับชม ${title} - Doo-Nang`;
+  document.getElementById('movieTitle').textContent=title;
+  document.getElementById('floatingTitle').textContent=title;
+
+  const transcodeUuid=movie.video?.transcodeUuid;
+  const cdnHostname=movie.video?.cdnHostname;
+  if(transcodeUuid&&cdnHostname){
+    const base=`https://${cdnHostname}/${transcodeUuid}`;
+    const videoUrl=`https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`;
+
+    // ตั้งค่า player เริ่มต้น
+    player.source={ type:'video', sources:[{src:videoUrl,type:'application/x-mpegURL'}] };
+
+    // Subtitles list
+    const subs=[
+      {label:"ซับไทย (VTT)",src:`${base}/sub_tha.vtt`},
+      {label:"ซับไทย (BDN/XML)",src:`${base}/sub_tha/index.xml`}
+    ];
+    const subList=document.getElementById('subtitleList');
+    subs.forEach(sub=>{
+      const btn=document.createElement('button');
+      btn.textContent=sub.label;
+      btn.onclick=async ()=>{
+        let trackSrc=sub.src;
+        if(trackSrc.endsWith(".xml")){
+          trackSrc=await convertBDNtoVTT(trackSrc);
+        }
+        player.source={
+          type:'video',
+          sources:[{src:videoUrl,type:'application/x-mpegURL'}],
+          tracks:[{kind:'subtitles',label:sub.label,src:trackSrc,default:true}]
+        };
+      };
+      subList.appendChild(btn);
+    });
+
+    // Audio tracks
+    try {
+      const res = await fetch(videoUrl);
+      if(res.ok){
+        const m3u8Text = await res.text();
+        const audioTracks = extractAudioTracks(m3u8Text);
+        const audioList=document.getElementById('audioList');
+        audioTracks.forEach(track=>{
+          const btn=document.createElement('button');
+          btn.textContent=`เสียง ${track.language}`;
+          btn.onclick=()=>{
+            player.source={
+              type:'video',
+              sources:[{src:videoUrl,type:'application/x-mpegURL',audio:track.uri}]
+            };
+          };
+          audioList.appendChild(btn);
+        });
+      }
+    } catch(e){ console.warn("โหลด audio tracks ไม่ได้", e); }
+  }
+})();
+
+// Wake Lock
+async function requestWakeLock(){ try{ wakeLock=await navigator.wakeLock.request('screen'); }catch(e){ console.error(e);} }
+function releaseWakeLock(){ if(wakeLock){ wakeLock.release(); wakeLock=null; } }
+player.on('play',requestWakeLock); player.on('pause',releaseWakeLock);
+
+// Sidebar toggle & back
+document.getElementById('toggleSidebar').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('active');
+};
+
+document.getElementById('backBtn').onclick = () => {
+  window.history.back();
+};
+</script>
+</body>
+</html>
