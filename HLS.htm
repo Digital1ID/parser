@@ -353,7 +353,6 @@ async function loadSeriesEpisode(showId, seasonNo, episodeNo){
 
 <!-- Script Part 2: Player Init + Init Page -->
 <script>
-// --- Player Init ---
 function initPlayer(videoURL){
   const video=document.getElementById("video");
   const audioSelector=document.getElementById("audioSelector");
@@ -365,7 +364,6 @@ function initPlayer(videoURL){
     hls.loadSource(videoURL);
 
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-      // Audio menu
       audioSelector.innerHTML='';
       hls.audioTracks.forEach((track,i)=>{
         const opt=document.createElement("option");
@@ -375,7 +373,6 @@ function initPlayer(videoURL){
       });
       audioSelector.onchange=()=>{ hls.audioTrack=parseInt(audioSelector.value); };
 
-      // Quality menu
       qualitySelector.innerHTML='<option value="-1">Auto</option>';
       hls.levels.forEach((level,i)=>{
         const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
@@ -390,7 +387,6 @@ function initPlayer(videoURL){
   }
 }
 
-// --- Init Page ---
 window.onload = async () => {
   const params = new URLSearchParams(window.location.search);
   const type = params.get("type");
@@ -406,7 +402,11 @@ window.onload = async () => {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
     }
   } else if(type==="series" && ids){
-    const show = await fetchSeriesById(parseInt(ids,10));
+    const showId = parseInt(ids.split("/")[0]);
+    const seasonNo = parseInt(ids.split("/")[1]);
+    const episodeNo = parseInt(ids.split("/")[2]);
+
+    const show = await fetchSeriesById(showId);
     if(show){
       document.title = `${show.titleTh} (${show.titleEn})`;
       const seasonSelect=document.getElementById("seasonSelect");
@@ -426,7 +426,7 @@ window.onload = async () => {
         seasonSelect.appendChild(opt);
       });
 
-      async function loadEpisodes(seasonNo){
+      async function loadEpisodes(seasonNo, episodeNo=null){
         episodeSelect.innerHTML="";
         seasonMap[seasonNo].forEach(ep=>{
           const opt=document.createElement("option");
@@ -435,18 +435,18 @@ window.onload = async () => {
           episodeSelect.appendChild(opt);
         });
 
-        // โหลดตอนแรกของ season ที่เลือก
-        const firstEp = seasonMap[seasonNo][0];
-        const epData = await processEpisode(firstEp);
-        initPlayer(epData.video);
-        renderSubtitleMenu(epData.subtitle);
-        document.getElementById("videoTitle").innerText = epData.title;
+        let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
+        if(targetEp){
+          const epData = await processEpisode(targetEp);
+          initPlayer(epData.video);
+          renderSubtitleMenu(epData.subtitle);
+          document.getElementById("videoTitle").innerText = epData.title;
+          seasonSelect.value = seasonNo;
+          episodeSelect.value = targetEp.episodeNo;
+        }
       }
 
-      // เมื่อเปลี่ยน season
       seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
-
-      // เมื่อเปลี่ยน episode
       episodeSelect.addEventListener("change", async ()=>{
         const seasonNo = seasonSelect.value;
         const episodeNo = episodeSelect.value;
@@ -459,10 +459,8 @@ window.onload = async () => {
         }
       });
 
-      // โหลด season แรกโดยอัตโนมัติ
-      const firstSeason = Object.keys(seasonMap)[0];
-      seasonSelect.value = firstSeason;
-      await loadEpisodes(firstSeason);
+      // ✅ Auto-select จากพารามิเตอร์ ids เช่น 1123/2/1
+      await loadEpisodes(seasonNo, episodeNo);
 
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลซีรีส์";
@@ -470,8 +468,11 @@ window.onload = async () => {
   }
 };
 </script>
+
+<!-- Script Part 3: Button Controls -->
 <script>
   // --- ปุ่มควบคุมหลัก ---
+const video=document.getElementById("video");
 document.getElementById("playBtn").addEventListener("click",()=>video.play());
 document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
 document.getElementById("muteBtn").addEventListener("click",()=>{
