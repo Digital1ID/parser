@@ -74,14 +74,17 @@ function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
         opt.text = lang.toUpperCase();
         subtitleSelector.appendChild(opt);
 
-        // ใช้ UUID เดียวกันเสมอ
         let srcUrl;
         if(entry.pathName.startsWith("http")){
           // API ส่งมาเป็น URL เต็ม
           srcUrl = entry.pathName;
         } else {
-          // subtitle อยู่บน statics CDN โดยใช้ uuid + pathName
-          srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}.vtt`;
+          // ใช้ uuid + pathName เสมอ
+          if(entry.codec === "VTT"){
+            srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}.vtt`;
+          } else if(entry.codec === "BDN"){
+            srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}/index.xml`;
+          }
         }
 
         if(entry.codec === "VTT"){
@@ -94,8 +97,7 @@ function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
         }
 
         if(entry.codec === "BDN"){
-          const subtitleURL = `https://${cdn}/${transcodeUuid}/${entry.pathName}/index.xml`;
-          loadBDNAsVTT(subtitleURL.replace("/index.xml",""), transcodeUuid, cdn);
+          loadBDNAsVTT(srcUrl.replace("/index.xml",""), transcodeUuid, cdn);
         }
       }
     });
