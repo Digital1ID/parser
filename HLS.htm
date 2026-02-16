@@ -426,25 +426,30 @@ window.onload = async () => {
         seasonSelect.appendChild(opt);
       });
 
-      async function loadEpisodes(seasonNo, episodeNo=null){
-        episodeSelect.innerHTML="";
-        seasonMap[seasonNo].forEach(ep=>{
-          const opt=document.createElement("option");
-          opt.value=ep.episodeNo;
-          opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
-          episodeSelect.appendChild(opt);
-        });
+async function loadEpisodes(seasonNo, episodeNo=null){
+  episodeSelect.innerHTML="";
+  seasonMap[seasonNo].forEach(ep=>{
+    const opt=document.createElement("option");
+    opt.value=ep.episodeNo;
+    opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+    episodeSelect.appendChild(opt);
+  });
 
-        let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
-        if(targetEp){
-          const epData = await processEpisode(targetEp);
-          initPlayer(epData.video);
-          renderSubtitleMenu(epData.subtitle);
-          document.getElementById("videoTitle").innerText = epData.title;
-          seasonSelect.value = seasonNo;
-          episodeSelect.value = targetEp.episodeNo;
-        }
-      }
+  let targetEp = episodeNo 
+    ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) 
+    : seasonMap[seasonNo][0];
+
+  if(targetEp){
+    const epData = await processEpisode(targetEp);
+    initPlayer(epData.video);
+    renderSubtitleMenu(epData.subtitle);
+    document.getElementById("videoTitle").innerText = epData.title;
+
+    // ✅ เซ็ตค่า dropdown ให้ตรงกับพารามิเตอร์
+    seasonSelect.value = seasonNo;
+    episodeSelect.value = targetEp.episodeNo;
+  }
+}
 
       seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
       episodeSelect.addEventListener("change", async ()=>{
