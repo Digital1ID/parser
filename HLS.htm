@@ -5,54 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Custom HLS Player</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
-<style>
-  body {
-    margin:0; background:#000; width:100vw; height:100vh;
-    display:flex; flex-direction:column; font-family:Arial, sans-serif;
-  }
-  video {
-    flex:1; width:100%; height:100%; object-fit:contain;
-    background:#000;
-  }
-  #subtitleOverlay {
-    position: fixed; z-index: 9999; pointer-events: none;
-    display: none; opacity: 0;
-    transition: opacity 0.4s ease, transform 0.3s ease;
-    max-width: 60%; max-height: 25%;
-    left: 50%; bottom: 8%; transform: translateX(-50%);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
-    border-radius: 6px; background-color: rgba(0,0,0,0.2);
-  }
-  #controls {
-    background:#111; color:#fff; padding:12px;
-    display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
-    border-top:1px solid #333;
-  }
-  select, button {
-    padding:8px 14px;
-    background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.25);
-    color:#fff; border-radius:6px;
-    cursor:pointer; transition:all 0.25s ease;
-    font-size:14px;
-  }
-  select:hover, button:hover {
-    background:rgba(255,255,255,0.2);
-    border-color:#fff;
-    transform:scale(1.05);
-  }
-  button:active {
-    transform:scale(0.95);
-  }
-  #videoTitle {
-    color:#fff; padding:10px; text-align:center;
-    font-size:16px; font-weight:bold;
-  }
-</style>
+  <style>
+    body {
+      margin:0; background:#000; width:100vw; height:100vh;
+      display:flex; flex-direction:column; font-family:Arial, sans-serif;
+    }
+    #topBar {
+      background:rgba(0,0,0,0.6); color:#fff;
+      padding:8px; text-align:center;
+      display:none; /* default hidden, show only for series */
+      position:absolute; top:0; left:0; width:100%;
+      z-index:1000;
+    }
+    #videoContainer {
+      flex:1; position:relative; display:flex; align-items:center; justify-content:center;
+      background:#000;
+    }
+    video {
+      width:100%; height:100%; object-fit:contain;
+      background:#000;
+    }
+    #subtitleOverlay {
+      position:absolute; pointer-events:none;
+      display:none; opacity:0;
+      transition:opacity 0.4s ease;
+      max-width:60%; max-height:25%;
+      left:50%; bottom:8%; transform:translateX(-50%);
+      filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+      border-radius:6px; background-color:rgba(0,0,0,0.2);
+    }
+    #controls {
+      background:#111; color:#fff; padding:12px;
+      display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+      border-top:1px solid #333;
+    }
+    select, button {
+      padding:8px 14px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.25);
+      color:#fff; border-radius:6px;
+      cursor:pointer; transition:all 0.25s ease;
+      font-size:14px;
+    }
+    select:hover, button:hover {
+      background:rgba(255,255,255,0.2);
+      border-color:#fff;
+      transform:scale(1.05);
+    }
+    button:active { transform:scale(0.95); }
+    #videoTitle {
+      font-size:16px; font-weight:bold;
+    }
+  </style>
 </head>
 <body>
-  <video id="video" autoplay crossorigin="anonymous"></video>
-  <img id="subtitleOverlay" />
+  <!-- Top bar: ใช้เฉพาะ series -->
+  <div id="topBar">
+    <div id="videoTitle"></div>
+    <div id="selectorBar">
+      <label>Season: <select id="seasonSelect"></select></label>
+      <label>Episode: <select id="episodeSelect"></select></label>
+    </div>
+  </div>
+
+  <!-- Video + Subtitle Overlay -->
+  <div id="videoContainer">
+    <video id="video" autoplay crossorigin="anonymous"></video>
+    <img id="subtitleOverlay" />
+  </div>
+
+  <!-- Controls -->
   <div id="controls">
     <label>Audio: <select id="audioSelector"></select></label>
     <label>Quality: <select id="qualitySelector"></select></label>
@@ -64,11 +86,6 @@
     <button id="forwardBtn">⏩ +10s</button>
     <button id="fullscreenBtn">⛶ Fullscreen</button>
   </div>
-  <div id="selectorBar">
-    <label>Season: <select id="seasonSelect"></select></label>
-    <label>Episode: <select id="episodeSelect"></select></label>
-  </div>
-  <div id="videoTitle"></div>
 
 <!-- Script Part 1: Utilities + Parsers + Subtitle Handling -->
 <script>
