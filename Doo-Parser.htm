@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Parser + hls.js Player</title>
+  <title>Doo-Parser Player</title>
   <style>
     body { margin:0; background:#000; width:100vw; height:100vh; display:flex; flex-direction:column; }
     #videoTitle { color:#fff; padding:10px; }
@@ -60,9 +60,9 @@ const qualitySelector = document.getElementById('qualitySelector');
 const subtitleSelector = document.getElementById('subtitleSelector');
 const subtitleOverlay = document.getElementById('subtitleOverlay');
 
-let bdnSubtitles = [];
 let activeCDN = null;
 
+// --- Subtitle BDN ---
 function timecodeToVTT(tc) {
   const [hh, mm, ss, ff] = tc.split(":").map(Number);
   const total = hh * 3600 + mm * 60 + ss + (ff || 0) / 25;
@@ -129,7 +129,7 @@ function activateBDNOverlay(folder, videoId, cdn) {
   });
 }
 
-// ตัวอย่าง initPlayer
+// --- Player Init ---
 async function initPlayer(videoURL, videoId, cdn) {
   activeCDN = cdn;
   if (Hls.isSupported()) {
@@ -168,7 +168,7 @@ async function initPlayer(videoURL, videoId, cdn) {
   }
 }
 
-// ปุ่มควบคุม
+// --- Controls ---
 document.getElementById("playPause").onclick = () => {
   if(video.paused) video.play(); else video.pause();
 };
@@ -182,13 +182,74 @@ document.getElementById("fullscreen").onclick = () => {
   if(video.requestFullscreen) video.requestFullscreen();
 };
 
-window.onload = () => {
-  // ตัวอย่างการเรียก initPlayer
-const videoId = movie.video.transcodeUuid;
-const cdn = movie.video.cdnHostname;
-const videoURL = `https://api.doo-nang.com/video/${videoId}/playlist.m3u8`;
-initPlayer(videoURL, videoId, cdn);
+// --- Init Page ---
+window.onload = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get("type");
+  const ids = params.get("ids");
+
+  if(type === "movie" && ids){
+    const movie = await fetchMovieById(parseInt(ids,10)); // ต้องมีฟังก์ชัน fetchMovieById
+    if(movie){
+      initPlayer(movie.video, movie.id, movie.cdnHostname);
+      document.getElementById("videoTitle").innerText = movie.title;
+    } else {
+      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
+    }
+  } else if(type === "series" && ids){
+    const show = await fetchSeriesById(parseInt(ids,10)); // ต้องมีฟังก์ชัน fetchSeriesById
+    if(show){
+      document.title = `${show.titleTh} (${show.titleEn})`;
+      const seasonSelect = document.getElementById("seasonSelect");
+      const episodeSelect = document.getElementById("episodeSelect");
+      const selectorBar = document.getElementById("selectorBar");
+      selectorBar.style.display = "flex";
+
+      // Group episodes by season
+      const seasonMap = {};
+      show.episodes.forEach(ep=>{
+        if(!seasonMap[ep.seasonNo]) seasonMap[ep.seasonNo] = [];
+        seasonMap[ep.seasonNo].push(ep);
+      });
+
+      Object.keys(seasonMap).forEach(seasonNo=>{
+        const opt = document.createElement("option");
+        opt.value = seasonNo; opt.text = `Season ${seasonNo}`;
+        seasonSelect.appendChild(opt);
+      });
+
+      async function loadEpisodes(seasonNo){
+        episodeSelect.innerHTML = "";
+        seasonMap[seasonNo].forEach(ep=>{
+          const opt = document.createElement("option");
+          opt.value = ep.episodeNo;
+          opt.text = `Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+          episodeSelect.appendChild(opt);
+        });
+        const firstEp = seasonMap[seasonNo][0];
+        const epData = await processEpisode(firstEp); // ต้องมีฟังก์ชัน processEpisode
+        initPlayer(epData.video, epData.episode, show.cdnHostname);
+        document.getElementById("videoTitle").innerText = epData.title;
+      }
+
+      seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
+      episodeSelect.addEventListener("change", async ()=>{
+        const seasonNo = seasonSelect.value, episodeNo = episodeSelect.value;
+        const ep = seasonMap[seasonNo].find(e=>String(e.episodeNo)===episodeNo);
+        if(ep){
+          const epData = await processEpisode(ep);
+          initPlayer(epData.video, epData.episode, show.cdnHostname);
+          document.getElementById("videoTitle").innerText = epData.title;
+        }
+      });
+
+      // โหลดซีซั่นแรกและตอนแรกโดยอัตโนมัติ
+      const firstSeason = Object.keys(seasonMap)[0];
+      seasonSelect.value = firstSeason;
+      await loadEpisodes(firstSeason);
+    } else {
+      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลซีรีส์";
+    }
+  }
 };
-</script>
-</body>
-</html>
+
