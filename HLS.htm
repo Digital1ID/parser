@@ -62,7 +62,7 @@
     <button id="muteBtn">🔊 Mute</button>
     <button id="backwardBtn">⏪ -10s</button>
     <button id="forwardBtn">⏩ +10s</button>
-    <button id="fullscreenBtn">Fullscreen</button>
+    <button id="fullscreenBtn">⛶ Fullscreen</button>
   </div>
   <div id="selectorBar">
     <label>Season: <select id="seasonSelect"></select></label>
@@ -459,7 +459,7 @@ window.onload = async () => {
         }
       });
 
-      // ✅ Auto-select จากพารามิเตอร์ ids เช่น 1123/2/1
+      // ✅ Auto-select จากพารามิเตอร์ ids เช่น 1123/4/1
       await loadEpisodes(seasonNo, episodeNo);
 
     } else {
@@ -471,7 +471,6 @@ window.onload = async () => {
 
 <!-- Script Part 3: Button Controls -->
 <script>
-  // --- ปุ่มควบคุมหลัก ---
 const video=document.getElementById("video");
 document.getElementById("playBtn").addEventListener("click",()=>video.play());
 document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
@@ -481,18 +480,19 @@ document.getElementById("muteBtn").addEventListener("click",()=>{
 });
 document.getElementById("forwardBtn").addEventListener("click",()=>video.currentTime+=10);
 document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
-// --- Fullscreen Button --- 
-  const fullscreenBtn=document.getElementById("fullscreenBtn"); 
-  fullscreenBtn.addEventListener("click",()=>{ 
-    if(!document.fullscreenElement){ 
-      document.body.requestFullscreen(); 
-    } else { 
-      document.exitFullscreen(); 
-    } 
-  }); 
-  document.addEventListener("fullscreenchange",()=>{ 
-    fullscreenBtn.textContent=document.fullscreenElement?"Exit Fullscreen":"Fullscreen"; 
-  }); 
+
+const fullscreenBtn=document.getElementById("fullscreenBtn"); 
+fullscreenBtn.addEventListener("click",()=>{ 
+  if(!document.fullscreenElement){ 
+    document.body.requestFullscreen(); 
+  } else { 
+    document.exitFullscreen(); 
+  } 
+}); 
+
+document.addEventListener("fullscreenchange",()=>{ 
+  fullscreenBtn.textContent=document.fullscreenElement ? "Exit Fullscreen" : "⛶ Fullscreen"; 
+});
 </script>
 </body>
 </html>
