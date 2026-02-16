@@ -36,6 +36,7 @@
 <script>
 jwplayer.key = "eNFaXCjyURVoCCGiHp7HTQ3hDhE/AfL0g8VE1fRbL84=";
 
+// --- Utilities ---
 async function checkSubtitleExists(url) {
   try { const res = await fetch(url, { method: 'HEAD' }); return res.ok; } catch { return false; }
 }
@@ -45,12 +46,50 @@ function extractAudioTracks(m3u8Text) {
   return audioTracks;
 }
 
-// Movie Parser
+// --- BDN → VTT Converter ---
+async function loadBDNAsVTT(baseUrl, lang) {
+  try {
+    const res = await fetch(`${baseUrl}/index.xml`);
+    const xmlText = await res.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+    let vtt = "WEBVTT\n\n";
+    const events = xmlDoc.querySelectorAll("Event");
+    events.forEach((ev, i) => {
+      const start = convertTimecode(ev.getAttribute("InTC"));
+      const end = convertTimecode(ev.getAttribute("OutTC"));
+      const img = ev.querySelector("Graphic")?.getAttribute("Source");
+      if(start && end && img){
+        vtt += `${i+1}\n${start} --> ${end}\n<img src="${baseUrl}/${img}">\n\n`;
+      }
+    });
+
+    const blob = new Blob([vtt], { type: "text/vtt" });
+    const url = URL.createObjectURL(blob);
+
+    return { file: url, label: lang.toUpperCase()+" (BDN)", kind: "captions" };
+  } catch (err) {
+    console.error("BDN parse error:", err);
+    return null;
+  }
+}
+
+function convertTimecode(tc) {
+  if(!tc) return null;
+  const parts = tc.split(":");
+  if(parts.length < 4) return null;
+  const [hh, mm, ss, ff] = parts.map(Number);
+  const ms = Math.floor((ff/25)*1000); // สมมติ 25fps
+  return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}.${String(ms).padStart(3,"0")}`;
+}
+
+// --- Movie Parser ---
 async function fetchMovieById(movieId) {
   const query = `
     query getMovie($id: Int!) {
       movie(id: $id) {
-        id titleTh titleEn descriptionTh synopsisTh releaseDate posterUrl imdbRating nation
+        id titleTh titleEn
         video { transcodeUuid cdnHostname subtitleMetadata }
       }
     }
@@ -71,16 +110,16 @@ async function fetchMovieById(movieId) {
     const subs=[
       {lang:"th",codec:"VTT",src:`${base}/sub_tha.vtt`},
       {lang:"en",codec:"VTT",src:`${base}/sub_eng.vtt`},
-      {lang:"th",codec:"BDN",src:`${base}/sub_tha/index.xml`}
+      {lang:"th",codec:"BDN",src:`${base}/sub_tha`}
     ];
-    for(const s of subs) if(await checkSubtitleExists(s.src)) subtitle.push(s);
+    for(const s of subs) if(await checkSubtitleExists(s.src+(s.codec==="BDN"?"/index.xml":""))) subtitle.push(s);
     try{const res=await fetch(videoUrl); if(res.ok) audioTracks=extractAudioTracks(await res.text());}catch{}
   }
 
   return { id:movie.id, title:movie.titleTh||movie.titleEn, video:videoUrl, subtitle, audioTracks };
 }
 
-// Series Parser
+// --- Series Parser ---
 async function fetchSeriesById(showId) {
   const query = `
     query getShow($id: Int!) {
@@ -110,8 +149,8 @@ async function processEpisode(ep) {
     if(ep.video?.subtitleMetadata){
       for(const [lang,subs] of Object.entries(ep.video.subtitleMetadata)){
         for(const sub of subs){
-          const src=`${base}/${sub.pathName}.${sub.codec.toLowerCase()}`;
-          if(await checkSubtitleExists(src)) subtitle.push({lang,codec:sub.codec,src});
+          const src=`${base}/${sub.pathName}`;
+          if(await checkSubtitleExists(src+(sub.codec==="BDN"?"/index.xml":`.${sub.codec.toLowerCase()}`))) subtitle.push({lang,codec:sub.codec,src});
         }
       }
     }
@@ -120,43 +159,30 @@ async function processEpisode(ep) {
   return { season:ep.seasonNo, episode:ep.episodeNo, title:ep.titleTh||ep.titleEn||`EP${ep.episodeNo}`, video:videoUrl, subtitle, audioTracks };
 }
 
-// Setup JWPlayer
-function setupPlayer(data){
+// --- Setup JWPlayer ---
+async function setupPlayer(data){
   document.getElementById("videoTitle").innerText=data.title;
   const playerConfig={ width:"100%", height:"100%", aspectratio:"16:9", playlist:[{ file:data.video, tracks:[] }], primary:"html5", hlshtml:true, controls:true, autostart:true };
   
-  // ลบ overlay subtitle เดิมก่อน
   document.querySelectorAll(".subtitle-overlay").forEach(el=>el.remove());
 
-  data.subtitle.forEach(sub=>{
-    if(sub.src.endsWith(".vtt") || sub.src.endsWith(".xml")){
-      playerConfig.playlist[0].tracks.push({
-        file: sub.src,
-        label: sub.lang.toUpperCase(),
-        kind: "captions"
-      });
-    } else if(sub.src.endsWith(".jpg") || sub.src.endsWith(".png")){
-      const overlay=document.createElement("div");
-      overlay.className="subtitle-overlay";
-      overlay.innerHTML=`<img src="${sub.src}">`;
-      document.body.appendChild(overlay);
-      jwplayer("play").on("pause", ()=>overlay.style.display="none");
-      jwplayer("play").on("play", ()=>overlay.style.display="block");
+  for(const sub of data.subtitle){
+    if(sub.codec==="VTT"){
+      playerConfig.playlist[0].tracks.push({ file: sub.src, label: sub.lang.toUpperCase(), kind: "captions" });
+    } else if(sub.codec==="BDN"){
+      const track = await loadBDNAsVTT(sub.src, sub.lang);
+      if(track) playerConfig.playlist[0].tracks.push(track);
     }
-  });
+  }
 
   data.audioTracks.forEach(at=>{
-    playerConfig.playlist[0].tracks.push({
-      file: at.uri,
-      label: at.language.toUpperCase()+" Audio",
-      kind: "audio"
-    });
+    playerConfig.playlist[0].tracks.push({ file: at.uri, label: at.language.toUpperCase()+" Audio", kind: "audio" });
   });
 
   jwplayer("play").setup(playerConfig);
 }
 
-// Init
+// --- Init ---
 async function initPage(){
   const params=new URLSearchParams(window.location.search);
   const type=params.get("type"), ids=params.get("ids");
@@ -165,7 +191,7 @@ async function initPage(){
   if(type==="movie"){
     const movie=await fetchMovieById(parseInt(ids,10));
     if(movie) setupPlayer(movie);
-  } else if(type==="series"){
+    } else if(type==="series"){
     const show=await fetchSeriesById(parseInt(ids,10));
     if(!show){ document.getElementById("videoTitle").innerText="ไม่พบข้อมูลซีรีส์"; return; }
 
