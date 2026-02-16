@@ -184,10 +184,10 @@ document.getElementById("fullscreen").onclick = () => {
 
 window.onload = () => {
   // ตัวอย่างการเรียก initPlayer
-  const videoURL = "https://api.doo-nang.com/video/xxxx/playlist.m3u8";
-  const videoId = "xxxx";
-  const cdn = "statics-01.duckduckcdn.com";
-  initPlayer(videoURL, videoId, cdn);
+const videoId = movie.video.transcodeUuid;
+const cdn = movie.video.cdnHostname;
+const videoURL = `https://api.doo-nang.com/video/${videoId}/playlist.m3u8`;
+initPlayer(videoURL, videoId, cdn);
 };
 </script>
 </body>
