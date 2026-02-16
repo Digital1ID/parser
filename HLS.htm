@@ -68,7 +68,8 @@ function convertBDNtoVTT(xmlText){
   });
   return vtt;
 }
-async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
+
+async function loadBDNAsVTT(baseUrl, videoId, cdn, lang, label){
   const res = await fetch(`${baseUrl}/index.xml`);
   if(!res.ok) return {};
   const xmlText = await res.text();
@@ -79,38 +80,38 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
 
   const track = document.createElement("track");
   track.kind = "subtitles";
-  track.label = lang.toUpperCase();
-  track.srclang = lang;
+  track.label = label;   // เช่น "THA-1"
+  track.srclang = lang;  // เช่น "tha"
   track.src = vttUrl;
+  track.mode = "hidden";
   video.appendChild(track);
 
   return {folder};
 }
 
-// --- Subtitle Rendering ---
-const bdnSubtitles=[];
 function renderSubtitleMenu(subtitles){
   const video=document.getElementById("video");
   const subtitleSelector=document.getElementById("subtitleSelector");
   subtitleSelector.innerHTML='<option value="none">No Subtitles</option>';
   bdnSubtitles.length=0;
 
-  subtitles.forEach(sub=>{
+  subtitles.forEach((sub,i)=>{
     const opt=document.createElement("option");
-    opt.value=sub.lang;
-    opt.text=sub.lang.toUpperCase()+" ("+sub.codec+")";
+    const label = sub.lang.toUpperCase()+" ("+sub.codec+"-"+(i+1)+")";
+    opt.value=sub.lang+"_"+i; // unique value
+    opt.text=label;
     subtitleSelector.appendChild(opt);
 
     if(sub.codec==="VTT"){
       const track=document.createElement("track");
       track.kind="subtitles";
-      track.label=sub.lang.toUpperCase();
+      track.label=label;
       track.srclang=sub.lang;
       track.src=sub.src;
       video.appendChild(track);
     }
     if(sub.codec==="BDN"){
-      bdnSubtitles.push(sub);
+      bdnSubtitles.push({...sub, label});
     }
   });
 
@@ -124,7 +125,7 @@ function renderSubtitleMenu(subtitles){
 
     // ถ้าเป็น VTT
     const vttTrack=Array.from(video.textTracks).find(
-      t => t.srclang === selected || t.label.toLowerCase() === selected.toLowerCase()
+      t => t.label===selected || t.srclang===selected
     );
     if(vttTrack){
       vttTrack.mode="showing";
@@ -132,30 +133,30 @@ function renderSubtitleMenu(subtitles){
     }
 
     // ถ้าเป็น BDN
-    const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected);
+    const bdnEntry=bdnSubtitles.find((sub,i)=>selected===sub.lang+"_"+i);
     if(bdnEntry){
-      const { folder }=await loadBDNAsVTT(bdnEntry.src.replace("/index.xml",""), bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
-      activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
+      const { folder }=await loadBDNAsVTT(
+        bdnEntry.src.replace("/index.xml",""),
+        bdnEntry.videoId,
+        bdnEntry.cdn,
+        bdnEntry.lang,
+        bdnEntry.label
+      );
+      activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn, bdnEntry.label);
     }
   };
 }
 
-// --- Responsive Overlay ---
-function activateBDNOverlay(folder,videoId,cdn,lang){
-  const track=Array.from(video.textTracks).find(
-    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
-  );
+function activateBDNOverlay(folder,videoId,cdn,label){
+  const track=Array.from(video.textTracks).find(t=>t.label===label);
   if(!track) return;
-  track.mode="hidden";
 
   video.addEventListener("timeupdate",()=>{
     const cue=Array.from(track.activeCues||[])[0];
-    if(cue&&cue.text.trim()){
-      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+    if(cue && cue.text.trim()){
+      const imgName=cue.text.trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.src=imgURL;
-      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
-      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
     } else {
