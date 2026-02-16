@@ -2,13 +2,13 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Parser + JWPlayer</title>
+  <title>Parser + hls.js Player</title>
   <style>
     body { margin:0; background:#000; width:100vw; height:100vh; display:flex; flex-direction:column; }
-    #play { flex:1; }
+    #videoTitle { color:#fff; padding:10px; }
     #selectorBar { background:#111; color:#fff; padding:10px; display:none; gap:20px; }
     select { padding:6px; }
-    #videoTitle { color:#fff; padding:10px; }
+    video { width:100%; height:100%; background:#000; }
     .subtitle-overlay {
       position: absolute;
       bottom: 50px;
@@ -29,13 +29,11 @@
     <label for="episodeSelect">เลือกตอน:</label>
     <select id="episodeSelect"></select>
   </div>
-  <div id="play"></div>
+  <video id="video" controls></video>
   <div id="videoTitle"></div>
 
-  <script src="https://digital1id.vercel.app/p2p/jw/jwplayer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-jwplayer.key = "eNFaXCjyURVoCCGiHp7HTQ3hDhE/AfL0g8VE1fRbL84=";
-
 async function checkSubtitleExists(url) {
   try { const res = await fetch(url, { method: 'HEAD' }); return res.ok; } catch { return false; }
 }
@@ -120,40 +118,41 @@ async function processEpisode(ep) {
   return { season:ep.seasonNo, episode:ep.episodeNo, title:ep.titleTh||ep.titleEn||`EP${ep.episodeNo}`, video:videoUrl, subtitle, audioTracks };
 }
 
-// Setup JWPlayer
+// Setup hls.js Player
 function setupPlayer(data){
+  const video=document.getElementById("video");
   document.getElementById("videoTitle").innerText=data.title;
-  const playerConfig={ width:"100%", height:"100%", aspectratio:"16:9", playlist:[{ file:data.video, tracks:[] }], primary:"html5", hlshtml:true, controls:true, autostart:true };
-  
+
   // ลบ overlay subtitle เดิมก่อน
   document.querySelectorAll(".subtitle-overlay").forEach(el=>el.remove());
 
+  if(Hls.isSupported()){
+    const hls=new Hls();
+    hls.loadSource(data.video);
+    hls.attachMedia(video);
+  } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+    video.src=data.video;
+  }
+
+  // subtitle ปกติ (vtt/xml)
   data.subtitle.forEach(sub=>{
     if(sub.src.endsWith(".vtt") || sub.src.endsWith(".xml")){
-      playerConfig.playlist[0].tracks.push({
-        file: sub.src,
-        label: sub.lang.toUpperCase(),
-        kind: "captions"
-      });
+      const track=document.createElement("track");
+      track.kind="captions";
+      track.label=sub.lang.toUpperCase();
+      track.src=sub.src;
+      if(sub.lang==="th") track.default=true;
+      video.appendChild(track);
     } else if(sub.src.endsWith(".jpg") || sub.src.endsWith(".png")){
+      // subtitle แบบภาพ → overlay
       const overlay=document.createElement("div");
       overlay.className="subtitle-overlay";
       overlay.innerHTML=`<img src="${sub.src}">`;
       document.body.appendChild(overlay);
-      jwplayer("play").on("pause", ()=>overlay.style.display="none");
-      jwplayer("play").on("play", ()=>overlay.style.display="block");
+      video.addEventListener("pause", ()=>overlay.style.display="none");
+      video.addEventListener("play", ()=>overlay.style.display="block");
     }
   });
-
-  data.audioTracks.forEach(at=>{
-    playerConfig.playlist[0].tracks.push({
-      file: at.uri,
-      label: at.language.toUpperCase()+" Audio",
-      kind: "audio"
-    });
-  });
-
-  jwplayer("play").setup(playerConfig);
 }
 
 // Init
@@ -200,7 +199,6 @@ async function initPage(){
     }
 
     seasonSelect.addEventListener("change", ()=>loadEpisodes(seasonSelect.value));
-
     episodeSelect.addEventListener("change", async ()=>{
       const seasonNo = seasonSelect.value;
       const episodeNo = episodeSelect.value;
