@@ -38,7 +38,12 @@ jwplayer.key = "eNFaXCjyURVoCCGiHp7HTQ3hDhE/AfL0g8VE1fRbL84=";
 
 // --- Utilities ---
 async function checkSubtitleExists(url) {
-  try { const res = await fetch(url, { method: 'HEAD' }); return res.ok; } catch { return false; }
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 function extractAudioTracks(m3u8Text) {
   const audioTracks = []; const regex = /#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="([^"]+)".*?URI="([^"]+)"/g; let match;
@@ -149,7 +154,7 @@ async function processEpisode(ep) {
     if(ep.video?.subtitleMetadata){
       for(const [lang,subs] of Object.entries(ep.video.subtitleMetadata)){
         for(const sub of subs){
-          const src=`${base}/${sub.pathName}.vtt`;
+          const src=`${base}/${sub.pathName}`;
           if(await checkSubtitleExists(src+(sub.codec==="BDN"?"/index.xml":`.${sub.codec.toLowerCase()}`))) subtitle.push({lang,codec:sub.codec,src});
         }
       }
