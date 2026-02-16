@@ -420,6 +420,9 @@ window.onload = async () => {
       initPlayer(movie.video);
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
+
+      // ❌ ไม่ต้องแสดง TopBar สำหรับ movie
+      document.getElementById("topBar").style.display = "none";
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
     }
@@ -436,8 +439,8 @@ window.onload = async () => {
     if(show){
       const seasonSelect=document.getElementById("seasonSelect");
       const episodeSelect=document.getElementById("episodeSelect");
-      const selectorBar=document.getElementById("selectorBar");
-      selectorBar.style.display="flex";
+      const topBar=document.getElementById("topBar");
+      topBar.style.display="block"; // ✅ แสดง TopBar เฉพาะ series
 
       const seasonMap={};
       show.episodes.forEach(ep=>{
@@ -475,7 +478,6 @@ window.onload = async () => {
       seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
       episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
 
-      // ✅ โหลดตามพารามิเตอร์ ids เช่น 1123/2/4
       await loadEpisodes(seasonNo, episodeNo);
     }
   }
