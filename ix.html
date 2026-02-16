@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Doo-Nang Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
+  <style>
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: sans-serif;
+}
+video {
+  width: 100%;
+  height: 100vh;
+  object-fit: contain;
+}
+
+/* Overlay ปุ่มกลาง */
+#videoOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#videoOverlay button {
+  background: none;
+  border: none;
+  font-size: 48px;
+  color: white;
+  cursor: pointer;
+}
+
+/* Control Bar */
+#customControls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column; /* ให้เรียงเป็นแนวตั้ง */
+  gap: 12px;              /* เว้นระยะระหว่าง seek กับปุ่ม */
+  align-items: center;
+  background: rgba(0,0,0,0.6);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  color: white;
+  z-index: 999;
+}
+
+#customControls.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;   /* ซ่อนจริง */
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.seek-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+#seekBar {
+  flex: 1;
+}
+
+.buttons-wrapper {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+#timeDisplay {
+  min-width: 90px;
+  text-align: center;
+  font-size: 13px;
+  color: #ccc;
+}
+
+/* Dropdown Menu */
+.volume-dropdown, .settings-dropdown {
+  position: relative;
+}
+.volume-menu, .settings-menu {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  background: rgba(0,0,0,0.9);
+  padding: 10px;
+  border-radius: 6px;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+  z-index: 1000;
+}
+.volume-menu label, .settings-menu label {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+.volume-menu select, .settings-menu select {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+#videoOverlay {
+  transition: opacity 0.4s ease;
+}
+#videoOverlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.settings-dropdown {
+  position: relative;
+}
+.settings-menu {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  background: rgba(0,0,0,0.9);
+  padding: 10px;
+  border-radius: 6px;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+  z-index: 2000; /* ให้สูงกว่า control bar */
+}
+video::cue(.subimg) {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  color: transparent;
+  font-size: 0;
+  height: 80px;
+}
+video::cue {
+  color: white;
+  font-size: 16px;
+}
+  </style>
+</head>
+<body>
+  <video id="video" autoplay crossorigin="anonymous" allow="fullscreen; picture-in-picture"></video>
+
+  <!-- Overlay ปุ่มกลาง -->
+  <div id="videoOverlay">
+    <button id="rewindBtn">⏪</button>
+    <button id="playPauseBtn">▶</button>
+    <button id="forwardBtn">⏩</button>
+  </div>
+
+<!-- Control Wrapper -->
+<div id="customControls">
+  
+  <!-- Seek bar แยกออกมาไว้ด้านบน -->
+  <div class="seek-wrapper">
+    <input type="range" id="seekBar" value="0" min="0" max="100" />
+    <span id="timeDisplay">00:00 / 00:00</span>
+  </div>
+
+  <!-- Control buttons อยู่ด้านล่าง -->
+  <div class="buttons-wrapper">
+    <!-- ▶⏸ Play/Pause -->
+    <button id="playPauseBtn" class="icon-btn">
+      <svg viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>
+    </button>
+
+    <!-- 🔊 Volume -->
+    <div class="volume-dropdown">
+      <button id="volumeBtn" class="icon-btn">
+        <svg viewBox="0 0 24 24"><path fill="white" d="M7 9v6h4l5 5V4l-5 5H7z"/></svg>
+      </button>
+      <div class="volume-menu">
+        <label>Volume</label>
+        <select id="volumeSelector">
+          <option value="0">Mute</option>
+          <option value="0.25">25%</option>
+          <option value="0.5">50%</option>
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ⛶ Fullscreen -->
+    <button id="fullscreenBtn" class="icon-btn">
+      <svg viewBox="0 0 24 24"><path fill="white" d="M7 14H5v5h5v-2H7v-3zm12 5h-5v-2h3v-3h2v5zM7 5h3V3H5v5h2V5zm12 0v3h-3v2h5V3h-2z"/></svg>
+    </button>
+
+    <!-- ⚙️ Settings -->
+    <div class="settings-dropdown">
+      <button id="settingsBtn" class="icon-btn">⚙️</button>
+      <div class="settings-menu">
+        <label>🔊 Audio</label>
+        <select id="audioSelector">
+          <option value="en" selected>อังกฤษ</option>
+          <option value="th">ไทย</option>
+        </select>
+
+        <label>📺 Quality</label>
+        <select id="qualitySelector">
+          <option value="-1">Auto</option>
+          <option value="720">720p</option>
+          <option value="1080">1080p</option>
+        </select>
+
+        <label>🈳 Subtitle</label>
+        <select id="subtitleSelector">
+          <option value="none">No Subtitles</option>
+          <option value="en">อังกฤษ</option>
+          <option value="th">ไทย</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+  
+<script type="module" src="controls.js"></script>
+  <script>
+    const cdnList = ['statics-01.duckduckcdn.com', 'statics-02.duckduckcdn.com'];
+    const video = document.getElementById('video');
+    const audioSelector = document.getElementById('audioSelector');
+    const qualitySelector = document.getElementById('qualitySelector');
+    const subtitleSelector = document.getElementById('subtitleSelector');
+    const subtitleMenu = document.getElementById('subtitleMenu');
+
+const subtitleImage = document.createElement("img");
+subtitleImage.id = "subtitle-image";
+subtitleImage.style.position = "absolute";
+subtitleImage.style.zIndex = "10";
+subtitleImage.style.pointerEvents = "none";
+subtitleImage.style.display = "none";
+video.parentElement.style.position = "relative";
+video.parentElement.appendChild(subtitleImage);
+
+    let currentBDN = [];
+    let bdnSubtitles = [];
+    let metadata = null;
+    let activeCDN = null;
+
+    const selectedAudioTrack = parseInt(localStorage.getItem('audioTrack')) || -1;
+    const selectedSubtitle = localStorage.getItem('subtitleTrack') || 'none';
+    const selectedQuality = parseInt(localStorage.getItem('qualityLevel')) || -1;
+
+    function getDecodedVideoURL() {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('url');
+      if (!encoded) return '';
+      try {
+        return decodeURIComponent(atob(encoded));
+      } catch (e) {
+        console.error("❌ Failed to decode base64 URL:", e);
+        return '';
+      }
+    }
+
+    function extractVideoId(url) {
+      try {
+        const u = new URL(url);
+        const segments = u.pathname.split('/');
+        const uuidRegex = /^[a-f0-9\-]{36}$/i;
+        return segments.find(s => uuidRegex.test(s)) || null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function tryFallbackFetch(path) {
+      for (const cdn of cdnList) {
+        try {
+          const url = `https://${cdn}/${path}`;
+          const res = await fetch(url);
+          if (res.ok) return { res, cdn };
+        } catch {}
+      }
+      throw new Error("❌ All CDN fetch attempts failed");
+    }
+
+    function parseTimecode(tc) {
+      const [hh, mm, ss, ff] = tc.split(":").map(Number);
+      return hh * 3600 + mm * 60 + ss + ff / 25;
+    }
+
+async function loadBDNSubtitle(url, videoId, cdn) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch BDN XML");
+
+    const xmlText = await res.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+    const events = xmlDoc.querySelectorAll("Event");
+
+    const folder = url.split('/').slice(-2, -1)[0]; // เช่น sub_tha_3
+
+    return Array.from(events).map(event => {
+      const start = parseTimecode(event.getAttribute("InTC"));
+      const end = parseTimecode(event.getAttribute("OutTC"));
+      const graphic = event.querySelector("Graphic");
+      if (!graphic || !graphic.textContent) return null;
+
+      const imgName = graphic.textContent.trim();
+      const x = parseInt(graphic.getAttribute("X")) || 0;
+      const y = parseInt(graphic.getAttribute("Y")) || 0;
+      const width = parseInt(graphic.getAttribute("Width")) || 0;
+      const height = parseInt(graphic.getAttribute("Height")) || 0;
+
+      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
+      return { start, end, imgURL, x, y, width, height };
+    }).filter(Boolean);
+  } catch (err) {
+    console.warn("⚠️ BDN subtitle load failed:", err);
+    return [];
+  }
+}
+
+function renderSubtitleMenu(metadata, videoId, cdn) {
+  subtitleMenu.innerHTML = '';
+  for (const lang in metadata) {
+    if (lang === 'default') continue;
+    metadata[lang].forEach(entry => {
+      if (entry.codec === 'BDN' && !entry.error) {
+        const subtitleURL = `https://${cdn}/${videoId}/${entry.pathName}/index.xml`;
+        bdnSubtitles.push({ lang, url: subtitleURL });
+      }
+    });
+  }
+}
+
+    async function initPlayer() {
+      const videoURL = getDecodedVideoURL();
+      const videoId = extractVideoId(videoURL);
+      if (!videoURL || !videoId) return;
+
+      try {
+        const { res, cdn } = await tryFallbackFetch(`${videoId}/subtitle_metadata.json`);
+        metadata = await res.json();
+        activeCDN = cdn;
+        renderSubtitleMenu(metadata, videoId, cdn);
+      } catch {}
+
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.attachMedia(video);
+        hls.loadSource(videoURL);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          audioSelector.innerHTML = '';
+          hls.audioTracks.forEach((track, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.text = `${track.name || 'Track'} (${track.lang || 'und'})`;
+            audioSelector.appendChild(opt);
+          });
+          if (selectedAudioTrack >= 0) {
+            hls.audioTrack = selectedAudioTrack;
+            audioSelector.value = selectedAudioTrack;
+          }
+          audioSelector.onchange = () => {
+            hls.audioTrack = parseInt(audioSelector.value);
+            localStorage.setItem('audioTrack', audioSelector.value);
+          };
+
+          qualitySelector.innerHTML = '<option value="-1">Auto</option>';
+          hls.levels.forEach((level, i) => {
+            const label = level.height ? `${level.height}p` : `${Math.round(level.bitrate / 1000)}kbps`;
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.text = label;
+            qualitySelector.appendChild(opt);
+          });
+
+          if (selectedQuality >= 0 && selectedQuality < hls.levels.length) {
+            hls.currentLevel = selectedQuality;
+            qualitySelector.value = selectedQuality;
+          }
+
+          qualitySelector.onchange = () => {
+            const level = parseInt(qualitySelector.value);
+            hls.currentLevel = level;
+            localStorage.setItem('qualityLevel', level);
+          };
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = videoURL;
+      }
+
+// Subtitle selector setup
+subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
+const availableTracks = [];
+
+if (metadata) {
+  for (const lang in metadata) {
+    if (lang === "default") continue;
+    const entries = metadata[lang];
+    entries.forEach(entry => {
+      if (!entry.error && entry.codec === "VTT") {
+        const subtitleURL = `https://${activeCDN}/${videoId}/${entry.pathName}.vtt`;
+        const track = document.createElement("track");
+        track.kind = "subtitles";
+        track.label = lang.toUpperCase();
+        track.srclang = lang;
+        track.src = subtitleURL;
+
+        // ✅ ตั้ง default เฉพาะภาษาที่ตรงกับ selectedSubtitle
+        track.default = (lang === selectedSubtitle);
+        video.appendChild(track);
+
+        availableTracks.push(lang);
+      } else if (!entry.error && entry.codec === "BDN") {
+        const subtitleURL = `https://${activeCDN}/${videoId}/${entry.pathName}/index.xml`;
+        bdnSubtitles.push({ lang, url: subtitleURL });
+        availableTracks.push(lang);
+      }
+    });
+  }
+}
+
+// ✅ สร้าง <option> สำหรับ subtitleSelector
+availableTracks.forEach(lang => {
+  const opt = document.createElement("option");
+  opt.value = lang;
+  opt.text = lang.toUpperCase();
+  subtitleSelector.appendChild(opt);
+});
+
+// ✅ ตั้งค่าจาก localStorage และ trigger onchange
+subtitleSelector.value = selectedSubtitle;
+subtitleSelector.dispatchEvent(new Event('change'));
+
+// ✅ เมื่อผู้ใช้เปลี่ยน subtitle
+subtitleSelector.onchange = async () => {
+  const selected = subtitleSelector.value;
+  localStorage.setItem('subtitleTrack', selected);
+
+  Array.from(video.textTracks).forEach(track => track.mode = "disabled");
+  subtitleOverlay.style.display = "none";
+  subtitleOverlay.style.opacity = "0";
+
+  if (selected === "none") return;
+
+  const vttTrack = Array.from(video.textTracks).find(
+    track => (track.language || track.srclang) === selected
+  );
+  if (vttTrack) {
+    vttTrack.mode = "showing";
+    return;
+  }
+
+  const bdnEntry = bdnSubtitles.find(sub => sub.lang === selected);
+  if (bdnEntry) {
+    const baseUrl = bdnEntry.url.replace("/index.xml", "");
+    const { folder, videoId, cdn } = await loadBDNAsVTT(baseUrl, extractVideoId(getDecodedVideoURL()), activeCDN);
+    activateBDNOverlay(folder, videoId, cdn);
+  }
+};
+
+      // Fullscreen บน mobile เมื่อเริ่มเล่น
+      //if (window.innerWidth < 768) {
+      //  video.addEventListener('play', () => {
+      //    setTimeout(() => {
+      //      if (video.requestFullscreen && !document.fullscreenElement) {
+      //        video.requestFullscreen();
+      //      }
+      //    }, 300);
+      //  });
+      //}
+    }
+
+function timecodeToVTT(tc) {
+  const [hh, mm, ss, ff] = tc.split(":").map(Number);
+  const total = hh * 3600 + mm * 60 + ss + (ff || 0) / 25;
+  const h = String(Math.floor(total / 3600)).padStart(2, "0");
+  const m = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+  const s = String(Math.floor(total % 60)).padStart(2, "0");
+  const ms = String(Math.floor((total % 1) * 1000)).padStart(3, "0");
+  return `${h}:${m}:${s}.${ms}`;
+}
+
+function convertBDNtoVTT(xmlText) {
+  const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
+  const events = xmlDoc.querySelectorAll("Event");
+  let vtt = "WEBVTT\n\n";
+
+  events.forEach((ev, idx) => {
+    const start = timecodeToVTT(ev.getAttribute("InTC"));
+    const end = timecodeToVTT(ev.getAttribute("OutTC"));
+    const g = ev.querySelector("Graphic");
+    if (!g || !g.textContent) return;
+    const imgName = g.textContent.trim();
+
+    // ✅ ใส่ class subimg เพื่อให้ CSS ซ่อนได้เฉพาะ BDN cue
+    vtt += `${idx + 1}\n${start} --> ${end}\n<c.subimg>${imgName}</c>\n\n`;
+  });
+
+  return vtt;
+}
+
+async function loadBDNAsVTT(baseUrl, videoId, cdn) {
+  const url = `${baseUrl}/index.xml`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch BDN XML");
+  const xmlText = await res.text();
+  const folder = baseUrl.split('/').pop();
+  const vttText = convertBDNtoVTT(xmlText);
+
+  const blob = new Blob([vttText], { type: "text/vtt" });
+  const vttUrl = URL.createObjectURL(blob);
+
+  const track = document.createElement("track");
+  track.kind = "subtitles";
+  track.label = "BDN";
+  track.srclang = "und";
+  track.src = vttUrl;
+  track.default = true;
+  video.appendChild(track);
+
+  return { folder, videoId, cdn };
+}
+
+// สร้าง overlay
+const subtitleOverlay = document.createElement("img");
+subtitleOverlay.style.position = "fixed"; // รองรับ fullscreen
+subtitleOverlay.style.zIndex = "9999";
+subtitleOverlay.style.pointerEvents = "none";
+subtitleOverlay.style.display = "none";
+subtitleOverlay.style.transition = "opacity 0.3s ease-in-out, transform 0.3s ease-in-out";
+subtitleOverlay.style.maxWidth = "60%"; // ลดขนาดให้ดูพอดี
+subtitleOverlay.style.maxHeight = "25%"; // ป้องกันไม่ให้สูงเกินไป
+subtitleOverlay.style.left = "50%";
+subtitleOverlay.style.bottom = "8%";
+subtitleOverlay.style.transform = "translateX(-50%)";
+subtitleOverlay.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.7))"; // ✅ เพิ่มเงาให้ภาพลอยขึ้น
+subtitleOverlay.style.borderRadius = "6px"; // ✅ มุมโค้งเล็กน้อย
+subtitleOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.2)"; // ✅ รองพื้นเบา ๆ ให้ภาพเด่นขึ้น
+document.body.appendChild(subtitleOverlay);
+
+function activateBDNOverlay(folder, videoId, cdn) {
+  const track = Array.from(video.textTracks).find(t => t.label === "BDN");
+  if (!track) return;
+  track.mode = "hidden";
+
+  video.addEventListener("timeupdate", () => {
+    const cue = Array.from(track.activeCues || [])[0];
+    if (cue && cue.text.trim()) {
+      // ✅ ล้าง tag HTML เช่น <c.subimg> และ </c>
+      const imgName = cue.text
+        .replace(/<[^>]+>/g, "") // ลบทุก tag HTML
+        .trim();
+
+      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.src = imgURL;
+      subtitleOverlay.style.display = "block";
+      subtitleOverlay.style.opacity = "1";
+    } else {
+      subtitleOverlay.style.opacity = "0";
+      subtitleOverlay.style.display = "none";
+    }
+  });
+}
+
+    window.onload = () => {
+      initPlayer();
+    };
+  </script>
+
+</body>
+</html>
