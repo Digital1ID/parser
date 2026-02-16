@@ -159,6 +159,12 @@ function activateBDNOverlay(folder,videoId,cdn,label){
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
+
+      // ✅ เมื่อ cue หมดเวลา ให้ซ่อน
+      overlay cue.onexit = ()=>{ 
+        subtitleOverlay.style.opacity="0"; 
+        subtitleOverlay.style.display="none"; 
+      };
     } else {
       subtitleOverlay.style.opacity="0";
       subtitleOverlay.style.display="none";
