@@ -44,6 +44,44 @@ async function checkSubtitleExists(url){ try{ const res=await fetch(url,{method:
 function extractAudioTracks(m3uText){ const tracks=[]; const regex=/#EXT-X-MEDIA:TYPE=AUDIO.*?LANGUAGE="(.*?)".*?NAME="(.*?)".*?URI="(.*?)"/g; let match;
   while((match=regex.exec(m3uText))!==null){ tracks.push({lang:match[1],name:match[2],uri:match[3]}); } return tracks; }
 
+// --- BDN Conversion ---
+function timecodeToVTT(tc){
+  const [hh,mm,ss,ms] = tc.split(/[:.]/).map(Number);
+  const total = hh*3600 + mm*60 + ss + (ms||0)/1000;
+  const h = String(Math.floor(total/3600)).padStart(2,"0");
+  const m = String(Math.floor((total%3600)/60)).padStart(2,"0");
+  const s = String(Math.floor(total%60)).padStart(2,"0");
+  const msStr = String(Math.floor((total%1)*1000)).padStart(3,"0");
+  return `${h}:${m}:${s}.${msStr}`;
+}
+function convertBDNtoVTT(xmlText){
+  const xmlDoc = new DOMParser().parseFromString(xmlText,"application/xml");
+  const events = xmlDoc.querySelectorAll("Event");
+  let vtt = "WEBVTT\n\n";
+  events.forEach((ev,idx)=>{
+    const start = timecodeToVTT(ev.getAttribute("InTC"));
+    const end = timecodeToVTT(ev.getAttribute("OutTC"));
+    const g = ev.querySelector("Graphic");
+    if(!g) return;
+    const imgName = g.textContent.trim();
+    vtt += `${idx+1}\n${start} --> ${end}\n${imgName}\n\n`;
+  });
+  return vtt;
+}
+async function loadBDNAsVTT(baseUrl,videoId,cdn){
+  const res=await fetch(`${baseUrl}/index.xml`);
+  if(!res.ok) return {};
+  const xmlText=await res.text();
+  const folder=baseUrl.split('/').pop();
+  const vttText=convertBDNtoVTT(xmlText);
+  const blob=new Blob([vttText],{type:"text/vtt"});
+  const vttUrl=URL.createObjectURL(blob);
+  const track=document.createElement("track");
+  track.kind="subtitles"; track.label="BDN"; track.srclang="und"; track.src=vttUrl;
+  video.appendChild(track);
+  return {folder};
+}
+
 // --- Movie Parser ---
 async function fetchMovieById(movieId){ const query=`query getMovie($id:Int!){ movie(id:$id){ id titleTh titleEn video{ transcodeUuid cdnHostname subtitleMetadata } } }`;
   const response=await fetch("https://api.doo-nang.com/graphql",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:movieId}})});
@@ -81,30 +119,11 @@ function renderSubtitleMenu(subtitles){ const video=document.getElementById("vid
     const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected); if(bdnEntry){ const { folder }=await loadBDNAsVTT(bdnEntry.src.replace("/index.xml",""), bdnEntry.videoId, bdnEntry.cdn); activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn); } }; }
 
 // --- Responsive Overlay ---
-function activateBDNOverlay(folder,videoId,cdn){
-  const track=Array.from(video.textTracks).find(t=>t.label==="BDN");
-  if(!track) return;
-  track.mode="hidden";
-
-  video.addEventListener("timeupdate",()=>{
-    const cue=Array.from(track.activeCues||[])[0];
-    if(cue && cue.text.trim()){
-      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
-      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
-      subtitleOverlay.src=imgURL;
-
-      // Responsive scaling
-      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
-      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
-
-      subtitleOverlay.style.display="block";
-      subtitleOverlay.style.opacity="1";
-    } else {
-      subtitleOverlay.style.opacity="0";
-      subtitleOverlay.style.display="none";
-    }
-  });
-}
+function activateBDNOverlay(folder,videoId,cdn){ const track=Array.from(video.textTracks).find(t=>t.label==="BDN"); if(!track) return; track.mode="hidden";
+  video.addEventListener("timeupdate",()=>{ const cue=Array.from(track.activeCues||[])[0]; if(cue&&cue.text.trim()){ const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+    const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`; subtitleOverlay.src=imgURL;
+    subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px"; subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
+    subtitleOverlay.style.display="block"; subtitleOverlay.style.opacity="1"; } else { subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; } }); }
 </script>
 
 <!-- Script Part 2: Player Init + Init Page -->
