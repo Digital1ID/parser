@@ -74,19 +74,34 @@ function renderSubtitleMenu(metadata, videoId, cdn) {
         opt.text = lang.toUpperCase();
         subtitleSelector.appendChild(opt);
 
+        let srcUrl;
+
+        // กรณี API ส่ง URL เต็มมาแล้ว
+        if(entry.pathName.startsWith("http")){
+          srcUrl = entry.pathName;
+
+        // กรณี pathName มีโฟลเดอร์อยู่แล้ว เช่น "1/sub_tha"
+        } else if(entry.pathName.includes("/")){
+          srcUrl = `https://${cdn}/${entry.pathName}.vtt`;
+
+        // กรณี pathName เป็นไฟล์ flat เช่น "sub_tha"
+        } else {
+          srcUrl = `https://${cdn}/${videoId}/${entry.pathName}.vtt`;
+        }
+
         // VTT
         if(entry.codec === "VTT"){
           const track = document.createElement("track");
           track.kind = "subtitles";
           track.label = lang.toUpperCase();
           track.srclang = lang;
-          track.src = `https://${cdn}/${videoId}/${entry.pathName}.vtt`;
+          track.src = srcUrl;
           video.appendChild(track);
         }
 
         // BDN
         if(entry.codec === "BDN"){
-          const subtitleURL = `https://${cdn}/${videoId}/${entry.pathName}/index.xml`;
+          const subtitleURL = srcUrl.replace(".vtt","/index.xml");
           loadBDNAsVTT(subtitleURL.replace("/index.xml",""), videoId, cdn);
         }
       }
