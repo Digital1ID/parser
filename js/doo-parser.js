@@ -4,7 +4,7 @@ async function fetchMovieById(movieId) {
     query getMovie($id: Int!) {
       movie(id: $id) {
         id titleTh titleEn
-        video { transcodeUuid cdnHostname }
+        video { transcodeUuid cdnHostname subtitleMetadata }
       }
     }
   `;
@@ -15,11 +15,13 @@ async function fetchMovieById(movieId) {
   const result = await res.json();
   const movie = result?.data?.movie;
   if(!movie) return null;
+
   return {
     id: movie.id,
     title: movie.titleTh || movie.titleEn,
     video: `https://api.doo-nang.com/video/${movie.video.transcodeUuid}/playlist.m3u8`,
-    cdnHostname: movie.video.cdnHostname
+    cdnHostname: movie.video.cdnHostname,
+    subtitleMetadata: movie.video.subtitleMetadata
   };
 }
 
@@ -30,7 +32,7 @@ async function fetchSeriesById(showId) {
         id titleTh titleEn
         episodes {
           seasonNo episodeNo titleTh titleEn
-          video { transcodeUuid cdnHostname }
+          video { transcodeUuid cdnHostname subtitleMetadata }
         }
       }
     }
@@ -51,7 +53,8 @@ async function processEpisode(ep) {
     episode: ep.episodeNo,
     title: ep.titleTh || ep.titleEn || `EP${ep.episodeNo}`,
     video: `https://api.doo-nang.com/video/${transcodeUuid}/playlist.m3u8`,
-    cdnHostname
+    cdnHostname,
+    subtitleMetadata: ep.video?.subtitleMetadata
   };
 }
 
@@ -60,6 +63,7 @@ function initPlayer(videoURL, videoId, cdn) {
   const video = document.getElementById("video");
   const audioSelector = document.getElementById("audioSelector");
   const qualitySelector = document.getElementById("qualitySelector");
+  const subtitleSelector = document.getElementById("subtitleSelector");
 
   if(Hls.isSupported()){
     const hls = new Hls();
