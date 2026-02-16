@@ -112,6 +112,34 @@ subtitleSelector.onchange = async () => {
   }
 };
 
+// Responsive overlay สำหรับ BDN
+function activateBDNOverlay(folder, videoId, cdn) {
+  const track = Array.from(video.textTracks).find(t => t.label === "BDN");
+  if (!track) return;
+  track.mode = "hidden";
+
+  video.addEventListener("timeupdate", () => {
+    const cue = Array.from(track.activeCues || [])[0];
+    if (cue && cue.text.trim()) {
+      const imgName = cue.text.replace(/<[^>]+>/g, "").trim();
+      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.src = imgURL;
+
+      // Responsive scaling
+      const scaleX = video.clientWidth / video.videoWidth;
+      const scaleY = video.clientHeight / video.videoHeight;
+      subtitleOverlay.style.left = (video.clientWidth/2 - (subtitleOverlay.width/2)) + "px";
+      subtitleOverlay.style.bottom = (video.clientHeight * 0.08) + "px";
+
+      subtitleOverlay.style.display = "block";
+      subtitleOverlay.style.opacity = "1";
+    } else {
+      subtitleOverlay.style.opacity = "0";
+      subtitleOverlay.style.display = "none";
+    }
+  });
+}
+
 // Netflix-style shortcuts
 document.addEventListener("keydown",e=>{
   switch(e.key.toLowerCase()){
