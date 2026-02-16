@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custom HLS Player</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
+<style>
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: sans-serif;
+}
+video {
+  width: 100%;
+  height: 100vh;
+  object-fit: contain;
+}
+
+/* Overlay subtitle image */
+#subtitleOverlay {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+  max-width: 60%;
+  max-height: 25%;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+  border-radius: 6px;
+  background-color: rgba(0,0,0,0.2);
+}
+
+/* Control bar */
+#controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  background: rgba(0,0,0,0.6);
+  padding: 10px 20px;
+  border-radius: 8px;
+  z-index: 1000;
+}
+#controls select {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<video id="video" autoplay controls crossorigin="anonymous"></video>
+<img id="subtitleOverlay" />
+
+<!-- Control bar -->
+<div id="controls">
+  <label>Audio:
+    <select id="audioSelector"></select>
+  </label>
+  <label>Quality:
+    <select id="qualitySelector"></select>
+  </label>
+  <label>Subtitle:
+    <select id="subtitleSelector">
+      <option value="none">No Subtitles</option>
+    </select>
+  </label>
+</div>
+
+<script>
+// --- Utility ---
+function timecodeToVTT(tc) {
+  const [hh, mm, ss, ff] = tc.split(":").map(Number);
+  const total = hh * 3600 + mm * 60 + ss + (ff || 0) / 25;
+  const h = String(Math.floor(total / 3600)).padStart(2, "0");
+  const m = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+  const s = String(Math.floor(total % 60)).padStart(2, "0");
+  const ms = String(Math.floor((total % 1) * 1000)).padStart(3, "0");
+  return `${h}:${m}:${s}.${ms}`;
+}
+
+function convertBDNtoVTT(xmlText) {
+  const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
+  const events = xmlDoc.querySelectorAll("Event");
+  let vtt = "WEBVTT\n\n";
+  events.forEach((ev, idx) => {
+    const start = timecodeToVTT(ev.getAttribute("InTC"));
+    const end = timecodeToVTT(ev.getAttribute("OutTC"));
+    const g = ev.querySelector("Graphic");
+    if (!g || !g.textContent) return;
+    const imgName = g.textContent.trim();
+    vtt += `${idx + 1}\n${start} --> ${end}\n<c.subimg>${imgName}</c>\n\n`;
+  });
+  return vtt;
+}
+
+// --- Player init ---
+const video = document.getElementById("video");
+const subtitleOverlay = document.getElementById("subtitleOverlay");
+const audioSelector = document.getElementById("audioSelector");
+const qualitySelector = document.getElementById("qualitySelector");
+const subtitleSelector = document.getElementById("subtitleSelector");
+
+function scaleBDNPosition(ev) {
+  const scaleX = video.clientWidth / video.videoWidth;
+  const scaleY = video.clientHeight / video.videoHeight;
+  return {
+    left: ev.x * scaleX + "px",
+    top: ev.y * scaleY + "px",
+    width: ev.width * scaleX + "px",
+    height: ev.height * scaleY + "px"
+  };
+}
+
+async function loadBDNAsVTT(baseUrl, videoId, cdn) {
+  const url = `${baseUrl}/index.xml`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch BDN XML");
+  const xmlText = await res.text();
+  const folder = baseUrl.split('/').pop();
+  const vttText = convertBDNtoVTT(xmlText);
+  const blob = new Blob([vttText], { type: "text/vtt" });
+  const vttUrl = URL.createObjectURL(blob);
+
+  const track = document.createElement("track");
+  track.kind = "subtitles";
+  track.label = "BDN";
+  track.srclang = "und";
+  track.src = vttUrl;
+  track.default = true;
+  video.appendChild(track);
+
+  return { folder, videoId, cdn };
+}
+
+function activateBDNOverlay(folder, videoId, cdn) {
+  const track = Array.from(video.textTracks).find(t => t.label === "BDN");
+  if (!track) return;
+  track.mode = "hidden";
+
+  video.addEventListener("timeupdate", () => {
+    const cue = Array.from(track.activeCues || [])[0];
+    if (cue && cue.text.trim()) {
+      const imgName = cue.text.replace(/<[^>]+>/g, "").trim();
+      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.src = imgURL;
+      subtitleOverlay.style.display = "block";
+      subtitleOverlay.style.opacity = "1";
+    } else {
+      subtitleOverlay.style.opacity = "0";
+      subtitleOverlay.style.display = "none";
+    }
+  });
+}
+
+// --- Netflix-style UX shortcuts ---
+document.addEventListener("keydown", e => {
+  switch (e.key.toLowerCase()) {
+    case " ": // Space = play/pause
+      e.preventDefault();
+      if (video.paused) video.play(); else video.pause();
+      break;
+    case "arrowleft": // ← seek -10s
+      video.currentTime = Math.max(0, video.currentTime - 10);
+      break;
+    case "arrowright": // → seek +10s
+      video.currentTime = Math.min(video.duration, video.currentTime + 10);
+      break;
+    case "f": // Fullscreen toggle
+      if (!document.fullscreenElement) video.requestFullscreen();
+      else document.exitFullscreen();
+      break;
+    case "m": // Mute toggle
+      video.muted = !video.muted;
+      break;
+  }
+});
+
+// --- Example init ---
+window.onload = () => {
+  if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource("YOUR_PLAYLIST.m3u8"); // ใส่ URL จริง
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      // Audio tracks
+      audioSelector.innerHTML = "";
+      hls.audioTracks.forEach((track, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.text = track.name || track.lang || `Track ${i}`;
+        audioSelector.appendChild(opt);
+      });
+      audioSelector.onchange = () => hls.audioTrack = parseInt(audioSelector.value);
+
+      // Quality levels
+      qualitySelector.innerHTML = '<option value="-1">Auto</option>';
+      hls.levels.forEach((level, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.text = level.height ? `${level.height}p` : `${Math.round(level.bitrate/1000)}kbps`;
+        qualitySelector.appendChild(opt);
+      });
+      qualitySelector.onchange = () => hls.currentLevel = parseInt(qualitySelector.value);
+    });
+  } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    video.src = "YOUR_PLAYLIST.m3u8";
+  }
+};
+</script>
+
+</body>
+</html>
