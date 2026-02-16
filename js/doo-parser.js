@@ -58,12 +58,55 @@ async function processEpisode(ep) {
   };
 }
 
+// --- Subtitle Rendering ---
+function renderSubtitleMenu(metadata, videoId, cdn) {
+  const video = document.getElementById("video");
+  const subtitleSelector = document.getElementById("subtitleSelector");
+  subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
+
+  if(!metadata) return;
+
+  for (const lang in metadata) {
+    metadata[lang].forEach(entry => {
+      if (!entry.error) {
+        const opt = document.createElement("option");
+        opt.value = lang;
+        opt.text = lang.toUpperCase();
+        subtitleSelector.appendChild(opt);
+
+        // VTT
+        if(entry.codec === "VTT"){
+          const track = document.createElement("track");
+          track.kind = "subtitles";
+          track.label = lang.toUpperCase();
+          track.srclang = lang;
+          track.src = `https://${cdn}/${videoId}/${entry.pathName}.vtt`;
+          video.appendChild(track);
+        }
+
+        // BDN
+        if(entry.codec === "BDN"){
+          const subtitleURL = `https://${cdn}/${videoId}/${entry.pathName}/index.xml`;
+          loadBDNAsVTT(subtitleURL.replace("/index.xml",""), videoId, cdn);
+        }
+      }
+    });
+  }
+
+  subtitleSelector.onchange = () => {
+    const selected = subtitleSelector.value;
+    Array.from(video.textTracks).forEach(track => track.mode = "disabled");
+    if(selected === "none") return;
+    const vttTrack = Array.from(video.textTracks).find(t => t.srclang === selected);
+    if(vttTrack) vttTrack.mode = "showing";
+  };
+}
+
 // --- Player Init ---
 function initPlayer(videoURL, videoId, cdn) {
   const video = document.getElementById("video");
   const audioSelector = document.getElementById("audioSelector");
   const qualitySelector = document.getElementById("qualitySelector");
-  const subtitleSelector = document.getElementById("subtitleSelector");
 
   if(Hls.isSupported()){
     const hls = new Hls();
@@ -111,6 +154,7 @@ window.onload = async () => {
     const movie = await fetchMovieById(parseInt(ids,10));
     if(movie){
       initPlayer(movie.video, movie.id, movie.cdnHostname);
+      renderSubtitleMenu(movie.subtitleMetadata, movie.id, movie.cdnHostname);
       document.getElementById("videoTitle").innerText = movie.title;
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
@@ -145,8 +189,9 @@ window.onload = async () => {
           episodeSelect.appendChild(opt);
         });
         const firstEp = seasonMap[seasonNo][0];
-        const epData = await processEpisode(firstEp); // ต้องมีฟังก์ชัน processEpisode
+        const epData = await processEpisode(firstEp);
         initPlayer(epData.video, epData.episode, epData.cdnHostname);
+        renderSubtitleMenu(epData.subtitleMetadata, epData.episode, epData.cdnHostname);
         document.getElementById("videoTitle").innerText = epData.title;
       }
 
@@ -158,11 +203,11 @@ window.onload = async () => {
         if(ep){
           const epData = await processEpisode(ep);
           initPlayer(epData.video, epData.episode, epData.cdnHostname);
+          renderSubtitleMenu(epData.subtitleMetadata, epData.episode, epData.cdnHostname);
           document.getElementById("videoTitle").innerText = epData.title;
         }
       });
 
-      // โหลดซีซั่นแรกและตอนแรกโดยอัตโนมัติ
       const firstSeason = Object.keys(seasonMap)[0];
       seasonSelect.value = firstSeason;
       await loadEpisodes(firstSeason);
