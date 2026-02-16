@@ -77,8 +77,10 @@ function renderSubtitleMenu(metadata, transcodeUuid, cdn) {
         // ใช้ UUID เดียวกันเสมอ
         let srcUrl;
         if(entry.pathName.startsWith("http")){
-          srcUrl = entry.pathName; // API ส่งมาเป็น URL เต็ม
+          // API ส่งมาเป็น URL เต็ม
+          srcUrl = entry.pathName;
         } else {
+          // subtitle อยู่บน statics CDN โดยใช้ uuid + pathName
           srcUrl = `https://${cdn}/${transcodeUuid}/${entry.pathName}.vtt`;
         }
 
