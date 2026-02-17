@@ -57,14 +57,17 @@
   </style>
 </head>
 <body>
-<!-- Top bar: ใช้เฉพาะ series -->
-  <div id="topBar">
+<!-- Top bar -->
+<div id="topBar">
+  <!-- ✅ videoTitle อยู่ใน TopBar ตลอดเวลา -->
   <div id="videoTitle"></div>
-    <div id="selectorBar">
-      <label>Season: <select id="seasonSelect"></select></label>
-      <label>Episode: <select id="episodeSelect"></select></label>
-    </div>
+
+  <!-- ✅ selectorBar แสดงเฉพาะ series -->
+  <div id="selectorBar" style="display:none;">
+    <label>Season: <select id="seasonSelect"></select></label>
+    <label>Episode: <select id="episodeSelect"></select></label>
   </div>
+</div>
 
   <!-- Video + Subtitle Overlay -->
   <div id="videoContainer">
@@ -403,7 +406,7 @@ window.onload = async () => {
       initPlayer(movie.video);
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
-      document.getElementById("topBar").style.display="none";
+      document.getElementById("selectorBar").style.display="none";
     }
   }
 
