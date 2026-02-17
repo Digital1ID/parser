@@ -112,8 +112,6 @@
 
   <div id="controls">
     <button id="playPauseBtn">▶️ Play</button>
-    <button id="playBtn">▶️ Play</button>
-    <button id="pauseBtn">⏸️ Pause</button>
     <button id="backwardBtn">⏪ -10s</button>
     <button id="forwardBtn">⏩ +10s</button>
     <button id="muteBtn">🔊 Mute</button>
@@ -544,8 +542,7 @@ playPauseBtn.addEventListener("click",()=>{
 // อัปเดตปุ่มอัตโนมัติเมื่อสถานะ video เปลี่ยน
 video.addEventListener("play",()=>{ playPauseBtn.textContent="⏸️ Pause"; });
 video.addEventListener("pause",()=>{ playPauseBtn.textContent="▶️ Play"; });
-document.getElementById("playBtn").addEventListener("click",()=>video.play());
-document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
+
 document.getElementById("muteBtn").addEventListener("click",()=>{
   video.muted=!video.muted;
   document.getElementById("muteBtn").textContent=video.muted?"🔇 Unmute":"🔊 Mute";
