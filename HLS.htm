@@ -408,93 +408,95 @@ async function loadSeriesEpisode(showId, seasonNo, episodeNo){
 }
 </script>
 
-  <!-- Script Part 2: Init Page (Movie + Series) -->
-  <script>
-    function initPlayer(videoURL){
-      const video=document.getElementById("video");
-      if(Hls.isSupported()){
-        window.hls=new Hls();
-        hls.attachMedia(video);
-        hls.loadSource(videoURL);
-        hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-          loadAudioTracks(hls);
-          loadQualityLevels(hls);
-        });
-      } else if(video.canPlayType("application/vnd.apple.mpegurl")){
-        video.src=videoURL;
-      }
+<!-- Script Part 2: Init Page (Movie + Series) -->
+<script>
+function initPlayer(videoURL){
+  const video=document.getElementById("video");
+  if(Hls.isSupported()){
+    window.hls=new Hls();
+    hls.attachMedia(video);
+    hls.loadSource(videoURL);
+
+    // ✅ เติมค่า Audio/Quality หลัง manifest ถูก parse
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+      loadAudioTracks(hls);
+      loadQualityLevels(hls);
+    });
+  } else if(video.canPlayType("application/vnd.apple.mpegurl")){
+    video.src=videoURL;
+  }
+}
+
+window.onload = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get("type");
+  const ids = params.get("ids");
+
+  if(type==="movie" && ids){
+    const movieId = parseInt(ids,10);
+    const movie = await fetchMovieById(movieId);
+    if(movie){
+      initPlayer(movie.video);
+      renderSubtitleMenu(movie.subtitle);
+      document.getElementById("videoTitle").innerText = movie.title;
+      document.getElementById("selectorBar").style.display="none";
     }
+  }
 
-    window.onload = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const type = params.get("type");
-      const ids = params.get("ids");
+  if(type==="series" && ids){
+    const parts = ids.split("/");
+    const showId = parseInt(parts[0]);
+    const seasonNo = parts[1] ? parseInt(parts[1]) : 1;
+    const episodeNo = parts[2] ? parseInt(parts[2]) : 1;
 
-      if(type==="movie" && ids){
-        const movieId = parseInt(ids,10);
-        const movie = await fetchMovieById(movieId);
-        if(movie){
-          initPlayer(movie.video);
-          renderSubtitleMenu(movie.subtitle);
-          document.getElementById("videoTitle").innerText = movie.title;
-          document.getElementById("selectorBar").style.display="none";
+    const show = await fetchSeriesById(showId);
+    if(show){
+      const seasonSelect=document.getElementById("seasonSelect");
+      const episodeSelect=document.getElementById("episodeSelect");
+      const selectorBar=document.getElementById("selectorBar");
+      selectorBar.style.display="block";
+
+      const seasonMap={};
+      show.episodes.forEach(ep=>{
+        if(!seasonMap[ep.seasonNo]) seasonMap[ep.seasonNo]=[];
+        seasonMap[ep.seasonNo].push(ep);
+      });
+
+      Object.keys(seasonMap).forEach(seasonNoKey=>{
+        const opt=document.createElement("option");
+        opt.value=`?type=series&ids=${showId}/${seasonNoKey}/1`;
+        opt.text=`Season ${seasonNoKey}`;
+        seasonSelect.appendChild(opt);
+      });
+
+      async function loadEpisodes(seasonNo, episodeNo=null){
+        episodeSelect.innerHTML="";
+        seasonMap[seasonNo].forEach(ep=>{
+          const opt=document.createElement("option");
+          opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
+          opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+          episodeSelect.appendChild(opt);
+        });
+
+        let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
+        if(targetEp){
+          const epData = await processEpisode(targetEp);
+          initPlayer(epData.video);
+          renderSubtitleMenu(epData.subtitle);
+          document.getElementById("videoTitle").innerText = epData.title;
+          seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
+          episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
         }
       }
 
-      if(type==="series" && ids){
-        const parts = ids.split("/");
-        const showId = parseInt(parts[0]);
-        const seasonNo = parts[1] ? parseInt(parts[1]) : 1;
-        const episodeNo = parts[2] ? parseInt(parts[2]) : 1;
+      seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
+      episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
 
-        const show = await fetchSeriesById(showId);
-        if(show){
-          const seasonSelect=document.getElementById("seasonSelect");
-          const episodeSelect=document.getElementById("episodeSelect");
-          const selectorBar=document.getElementById("selectorBar");
-          selectorBar.style.display="block";
-
-          const seasonMap={};
-          show.episodes.forEach(ep=>{
-            if(!seasonMap[ep.seasonNo]) seasonMap[ep.seasonNo]=[];
-            seasonMap[ep.seasonNo].push(ep);
-          });
-
-          Object.keys(seasonMap).forEach(seasonNoKey=>{
-            const opt=document.createElement("option");
-            opt.value=`?type=series&ids=${showId}/${seasonNoKey}/1`;
-            opt.text=`Season ${seasonNoKey}`;
-            seasonSelect.appendChild(opt);
-          });
-
-          async function loadEpisodes(seasonNo, episodeNo=null){
-            episodeSelect.innerHTML="";
-            seasonMap[seasonNo].forEach(ep=>{
-              const opt=document.createElement("option");
-              opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
-              opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
-              episodeSelect.appendChild(opt);
-            });
-
-            let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
-            if(targetEp){
-              const epData = await processEpisode(targetEp);
-              initPlayer(epData.video);
-              renderSubtitleMenu(epData.subtitle);
-              document.getElementById("videoTitle").innerText = epData.title;
-              seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
-              episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
-            }
-          }
-
-          seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
-          episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
-
-          await loadEpisodes(seasonNo, episodeNo);
-        }
-      }
-    };
-  </script>
+      await loadEpisodes(seasonNo, episodeNo);
+    }
+  }
+};
+</script>
 
   <!-- Script Part 3: Controls + Settings Dropdown -->
   <script>
