@@ -10,12 +10,14 @@
       margin:0; background:#000; 
       display:flex; flex-direction:column; font-family:Arial, sans-serif;
     }
-    #topBar {
+    #topBar, #topTitle {
       background:rgba(0,0,0,0.6); color:#fff;
       padding:8px; text-align:center;
-      display:none; /* default hidden, show only for series */
       position:absolute; top:0; left:0; width:100%;
       z-index:1000;
+    }
+    #topBar {
+      display:none; /* default hidden, show only for series */
     }
     #videoContainer {
       flex:1; position:relative; max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;
@@ -59,9 +61,11 @@
   </style>
 </head>
 <body>
-  <!-- Top bar: ใช้เฉพาะ series -->
-  <div id="topBar">
+  <div id="topTitle">
     <div id="videoTitle"></div>
+  </div>
+  <!-- Top bar: ใช้เฉพาะ series -->
+    <div id="topBar">
     <div id="selectorBar">
       <label>Season: <select id="seasonSelect"></select></label>
       <label>Episode: <select id="episodeSelect"></select></label>
