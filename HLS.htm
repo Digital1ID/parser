@@ -589,7 +589,7 @@ window.onload = async () => {
           initPlayer(epData.video);
           renderSubtitleMenu(epData.subtitle);
           document.getElementById("videoTitle").innerText = epData.title;
-          document.title = `${show.title} - ${ep.episodeNo} - ${epData.title}`;
+          document.title = `${show.title} - ${targetEp.episodeNo} - ${epData.title}`;
           seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
           episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
         }
