@@ -23,7 +23,7 @@
     }
     #selectorBar { display:none; }
     #videoContainer {
-      flex:1; position:relative; max-width:100%; min-height:100vh;
+      flex:1; position:relative; max-width:100%; max-height:100%;
       display:flex; align-items:center; justify-content:center;
       background:#000;
     }
@@ -136,6 +136,7 @@
   </style>
 </head>
 <body>
+  <div id="videoContainer">
   <div id="topBar">
     <div id="videoTitle"></div>
     <div id="selectorBar">
@@ -144,7 +145,6 @@
     </div>
   </div>
 
-  <div id="videoContainer">
     <video id="video" autoplay crossorigin="anonymous"></video>
     <img id="subtitleOverlay" />
 
