@@ -440,6 +440,12 @@ window.onload = async () => {
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
       document.getElementById("selectorBar").style.display="none";
+
+      // ✅ เรียกซ้ำเพื่อให้ dropdown เติมค่าแน่นอน
+      if(hls){
+        loadAudioTracks(hls);
+        loadQualityLevels(hls);
+      }
     }
   }
 
@@ -486,6 +492,12 @@ window.onload = async () => {
           document.getElementById("videoTitle").innerText = epData.title;
           seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
           episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
+
+          // ✅ เรียกซ้ำเพื่อให้ dropdown เติมค่าแน่นอน
+          if(hls){
+            loadAudioTracks(hls);
+            loadQualityLevels(hls);
+          }
         }
       }
 
