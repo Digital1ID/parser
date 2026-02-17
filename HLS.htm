@@ -7,24 +7,25 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
   <style>
     body {
-      margin:0; background:#000; 
+      margin:0; background:#000;
       display:flex; flex-direction:column; font-family:Arial, sans-serif;
     }
     #videoTitle {
       background:rgba(0,0,0,0.6); color:#fff;
       padding:8px; text-align:center;
       position:absolute; top:0; left:0; width:100%;
-      z-index:1000;
+      z-index:1000; font-size:16px; font-weight:bold;
     }
     #topBar {
       background:rgba(0,0,0,0.6); color:#fff;
       padding:8px; text-align:center;
       display:none; /* default hidden, show only for series */
-      position:absolute; top:0; left:0; width:100%;
+      position:absolute; top:40px; left:0; width:100%;
       z-index:1000;
     }
     #videoContainer {
-      flex:1; position:relative; max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;
+      flex:1; position:relative; max-width:100%; max-height:100%;
+      display:flex; align-items:center; justify-content:center;
       background:#000;
     }
     video {
@@ -59,15 +60,12 @@
       transform:scale(1.05);
     }
     button:active { transform:scale(0.95); }
-    #videoTitle {
-      font-size:16px; font-weight:bold;
-    }
   </style>
 </head>
 <body>
-    <div id="videoTitle"></div>
+  <div id="videoTitle"></div>
   <!-- Top bar: ใช้เฉพาะ series -->
-    <div id="topBar">
+  <div id="topBar">
     <div id="selectorBar">
       <label>Season: <select id="seasonSelect"></select></label>
       <label>Episode: <select id="episodeSelect"></select></label>
@@ -80,24 +78,24 @@
     <img id="subtitleOverlay" />
   </div>
 
-<!-- Controls -->
-<div id="controls">
-  <label>Settings: 
-    <select id="settingsSelector">
-      <optgroup label="Audio" id="audioGroup"></optgroup>
-      <optgroup label="Quality" id="qualityGroup"></optgroup>
-      <optgroup label="Subtitle" id="subtitleGroup">
-        <option value="subtitle:none">No Subtitles</option>
-      </optgroup>
-    </select>
-  </label>
-  <button id="playBtn">▶️ Play</button>
-  <button id="pauseBtn">⏸️ Pause</button>
-  <button id="muteBtn">🔊 Mute</button>
-  <button id="backwardBtn">⏪ -10s</button>
-  <button id="forwardBtn">⏩ +10s</button>
-  <button id="fullscreenBtn">⛶ Fullscreen</button>
-</div>
+  <!-- Controls -->
+  <div id="controls">
+    <label>Settings: 
+      <select id="settingsSelector">
+        <optgroup label="Audio" id="audioGroup"></optgroup>
+        <optgroup label="Quality" id="qualityGroup"></optgroup>
+        <optgroup label="Subtitle" id="subtitleGroup">
+          <option value="subtitle:none">No Subtitles</option>
+        </optgroup>
+      </select>
+    </label>
+    <button id="playBtn">▶️ Play</button>
+    <button id="pauseBtn">⏸️ Pause</button>
+    <button id="muteBtn">🔊 Mute</button>
+    <button id="backwardBtn">⏪ -10s</button>
+    <button id="forwardBtn">⏩ +10s</button>
+    <button id="fullscreenBtn">⛶ Fullscreen</button>
+  </div>
 
 <!-- Script Part 1: Utilities + Parsers + Subtitle Handling -->
 <script>
@@ -380,38 +378,19 @@ async function loadSeriesEpisode(showId, seasonNo, episodeNo){
 }
 </script>
 
-<!-- Script Part 2: Player Init + Init Page -->
+<!-- Script Part 2: Init Page (Movie + Series) -->
 <script>
 function initPlayer(videoURL){
   const video=document.getElementById("video");
-  const audioSelector=document.getElementById("audioSelector");
-  const qualitySelector=document.getElementById("qualitySelector");
 
   if(Hls.isSupported()){
-    const hls=new Hls();
+    window.hls=new Hls();
     hls.attachMedia(video);
     hls.loadSource(videoURL);
 
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-      // ✅ โหลด Audio Tracks
-      audioSelector.innerHTML='';
-      hls.audioTracks.forEach((track,i)=>{
-        const opt=document.createElement("option");
-        opt.value=i;
-        opt.text=`${track.name||'Track'} (${track.lang||'und'})`;
-        audioSelector.appendChild(opt);
-      });
-      audioSelector.onchange=()=>{ hls.audioTrack=parseInt(audioSelector.value); };
-
-      // ✅ โหลด Quality Levels
-      qualitySelector.innerHTML='<option value="-1">Auto</option>';
-      hls.levels.forEach((level,i)=>{
-        const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
-        const opt=document.createElement("option");
-        opt.value=i; opt.text=label;
-        qualitySelector.appendChild(opt);
-      });
-      qualitySelector.onchange=()=>{ hls.currentLevel=parseInt(qualitySelector.value); };
+      loadAudioTracks(hls);
+      loadQualityLevels(hls);
     });
   } else if(video.canPlayType("application/vnd.apple.mpegurl")){
     video.src=videoURL;
@@ -423,24 +402,17 @@ window.onload = async () => {
   const type = params.get("type");
   const ids = params.get("ids");
 
-  // ✅ Movie Parser
   if(type==="movie" && ids){
     const movieId = parseInt(ids,10);
     const movie = await fetchMovieById(movieId);
-
     if(movie){
       initPlayer(movie.video);
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
-
-      // ❌ ไม่ต้องแสดง TopBar สำหรับ movie
-      document.getElementById("topBar").style.display = "none";
-    } else {
-      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
+      document.getElementById("topBar").style.display="none";
     }
   }
 
-  // ✅ Series Parser
   if(type==="series" && ids){
     const parts = ids.split("/");
     const showId = parseInt(parts[0]);
@@ -452,7 +424,7 @@ window.onload = async () => {
       const seasonSelect=document.getElementById("seasonSelect");
       const episodeSelect=document.getElementById("episodeSelect");
       const topBar=document.getElementById("topBar");
-      topBar.style.display="block"; // ✅ แสดง TopBar เฉพาะ series
+      topBar.style.display="block";
 
       const seasonMap={};
       show.episodes.forEach(ep=>{
