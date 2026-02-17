@@ -609,14 +609,17 @@ document.getElementById("forwardBtn").addEventListener("click",()=>video.current
 document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
 
 // Fullscreen
-const fullscreenBtn=document.getElementById("fullscreenBtn"); 
+const fullscreenBtn=document.getElementById("fullscreenBtn");
+
 fullscreenBtn.addEventListener("click",()=>{ 
   if(!document.fullscreenElement){ 
-    videoContainer.requestFullscreen(); 
+    // ✅ ทำให้ทั้งหน้าเว็บ fullscreen เหมือน F11
+    document.documentElement.requestFullscreen(); 
   } else { 
     document.exitFullscreen(); 
   } 
 });
+
 document.addEventListener("fullscreenchange",()=>{ 
   fullscreenBtn.textContent=document.fullscreenElement ? "Exit Fullscreen" : "⛶ Fullscreen"; 
 });
