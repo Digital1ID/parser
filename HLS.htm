@@ -40,6 +40,7 @@
       filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));
       border-radius:6px; background-color:rgba(0,0,0,0.2);
     }
+
 #controls {
   position:absolute;
   bottom:0;
@@ -51,10 +52,30 @@
   display:flex;
   justify-content:center;
   gap:12px;
+  flex-wrap:wrap; /* ✅ รองรับแนวตั้ง */
+  transition:opacity 0.4s ease;
+  opacity:1;
   z-index:1000;
 }
 
-#controls.hidden { opacity:0; pointer-events:none; }
+#controls.hidden,
+#topBar.hidden {
+  opacity:0;
+  pointer-events:none;
+}
+
+@media (orientation:portrait) {
+  #controls {
+    flex-direction:column; /* ✅ แนวตั้ง */
+    align-items:center;
+  }
+}
+
+@media (orientation:landscape) {
+  #controls {
+    flex-direction:row; /* ✅ แนวนอน */
+  }
+}
 
     select, button {
       padding:8px 14px;
@@ -551,6 +572,7 @@ const countdown=document.getElementById("countdown");
 const seeker=document.getElementById("seeker");
 const videoContainer=document.getElementById("videoContainer");
 const controls=document.getElementById("controls");
+const topBar=document.getElementById("topBar");
 
 // ปุ่ม Play/Pause รวมกัน
 playPauseBtn.addEventListener("click",()=>{
@@ -639,18 +661,27 @@ window.addEventListener("click",(e)=>{
 
 // ✅ Auto-hide Controls (Mouse + Touch)
 let hideTimeout=null;
+
 function showControls(){
   controls.classList.remove("hidden");
+  topBar.classList.remove("hidden");
   clearTimeout(hideTimeout);
-  hideTimeout=setTimeout(()=>{ controls.classList.add("hidden"); },3000);
+  hideTimeout=setTimeout(()=>{
+    controls.classList.add("hidden");
+    topBar.classList.add("hidden");
+  },3000);
 }
+
+// รองรับ mouse และ touch
 videoContainer.addEventListener("mousemove",showControls);
 videoContainer.addEventListener("touchstart",showControls);
+
 document.addEventListener("fullscreenchange",()=>{
   if(document.fullscreenElement){
-    showControls();
+    showControls(); // โชว์ทันที
   } else {
     controls.classList.remove("hidden");
+    topBar.classList.remove("hidden");
   }
 });
 </script>
