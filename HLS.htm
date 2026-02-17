@@ -159,29 +159,22 @@ async function fetchSubtitleMetadata(cdnHostname, transcodeUuid){
   try {
     const res = await fetch(url);
     if(!res.ok){
-      console.warn("Subtitle metadata not found, using fallback");
       return {
-        eng:[],
-        tha:[
+        eng:[], tha:[
           {codec:"VTT", pathName:"subtha", error:false},
           {codec:"VTT", pathName:"subtha1", error:false},
           {codec:"BDN", pathName:"subtha_2", error:false}
-        ],
-        default:[]
+        ], default:[]
       };
     }
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch(err){
-    console.error("Error fetching subtitle metadata:", err);
     return {
-      eng:[],
-      tha:[
+      eng:[], tha:[
         {codec:"VTT", pathName:"subtha", error:false},
         {codec:"VTT", pathName:"subtha1", error:false},
         {codec:"BDN", pathName:"subtha_2", error:false}
-      ],
-      default:[]
+      ], default:[]
     };
   }
 }
@@ -300,8 +293,6 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.src=imgURL;
-      subtitleOverlay.style.left=(video.clientWidth/2-(subtitleOverlay.width/2))+"px";
-      subtitleOverlay.style.bottom=(video.clientHeight*0.08)+"px";
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
       cue.onexit = ()=>{ subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; };
