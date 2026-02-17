@@ -10,12 +10,6 @@
       margin:0; background:#000;
       display:flex; flex-direction:column; font-family:Arial, sans-serif;
     }
-    #videoTitle {
-      background:rgba(0,0,0,0.6); color:#fff;
-      padding:8px; text-align:center;
-      position:absolute; top:0; left:0; width:100%;
-      z-index:1000; font-size:16px; font-weight:bold;
-    }
     #topBar {
       background:rgba(0,0,0,0.6); color:#fff;
       padding:8px; text-align:center;
@@ -63,9 +57,9 @@
   </style>
 </head>
 <body>
-  <div id="videoTitle"></div>
-  <!-- Top bar: ใช้เฉพาะ series -->
+<!-- Top bar: ใช้เฉพาะ series -->
   <div id="topBar">
+  <div id="videoTitle"></div>
     <div id="selectorBar">
       <label>Season: <select id="seasonSelect"></select></label>
       <label>Episode: <select id="episodeSelect"></select></label>
