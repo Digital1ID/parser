@@ -20,7 +20,7 @@
       background:rgba(0,0,0,0.6); color:#fff;
       padding:8px; text-align:center;
       display:none; /* default hidden, show only for series */
-      position:absolute; top:-20; left:0; width:100%;
+      position:absolute; top:0; left:0; width:100%;
       z-index:1000;
     }
     #videoContainer {
@@ -80,18 +80,24 @@
     <img id="subtitleOverlay" />
   </div>
 
-  <!-- Controls -->
-  <div id="controls">
-    <label>Audio: <select id="audioSelector"></select></label>
-    <label>Quality: <select id="qualitySelector"></select></label>
-    <label>Subtitle: <select id="subtitleSelector"><option value="none">No Subtitles</option></select></label>
-    <button id="playBtn">▶️ Play</button>
-    <button id="pauseBtn">⏸️ Pause</button>
-    <button id="muteBtn">🔊 Mute</button>
-    <button id="backwardBtn">⏪ -10s</button>
-    <button id="forwardBtn">⏩ +10s</button>
-    <button id="fullscreenBtn">⛶ Fullscreen</button>
-  </div>
+<!-- Controls -->
+<div id="controls">
+  <label>Settings: 
+    <select id="settingsSelector">
+      <optgroup label="Audio" id="audioGroup"></optgroup>
+      <optgroup label="Quality" id="qualityGroup"></optgroup>
+      <optgroup label="Subtitle" id="subtitleGroup">
+        <option value="subtitle:none">No Subtitles</option>
+      </optgroup>
+    </select>
+  </label>
+  <button id="playBtn">▶️ Play</button>
+  <button id="pauseBtn">⏸️ Pause</button>
+  <button id="muteBtn">🔊 Mute</button>
+  <button id="backwardBtn">⏪ -10s</button>
+  <button id="forwardBtn">⏩ +10s</button>
+  <button id="fullscreenBtn">⛶ Fullscreen</button>
+</div>
 
 <!-- Script Part 1: Utilities + Parsers + Subtitle Handling -->
 <script>
@@ -492,6 +498,72 @@ window.onload = async () => {
 
 <!-- Script Part 3: Button Controls -->
 <script>
+const settingsSelector = document.getElementById("settingsSelector");
+const audioGroup = document.getElementById("audioGroup");
+const qualityGroup = document.getElementById("qualityGroup");
+const subtitleGroup = document.getElementById("subtitleGroup");
+
+// ✅ โหลด Audio Tracks
+function loadAudioTracks(hls){
+  audioGroup.innerHTML="";
+  hls.audioTracks.forEach((track,i)=>{
+    const opt=document.createElement("option");
+    opt.value="audio:"+i;
+    opt.text=`${track.name||'Track'} (${track.lang||'und'})`;
+    audioGroup.appendChild(opt);
+  });
+}
+
+// ✅ โหลด Quality Levels
+function loadQualityLevels(hls){
+  qualityGroup.innerHTML="";
+  const autoOpt=document.createElement("option");
+  autoOpt.value="quality:-1"; autoOpt.text="Auto";
+  qualityGroup.appendChild(autoOpt);
+
+  hls.levels.forEach((level,i)=>{
+    const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
+    const opt=document.createElement("option");
+    opt.value="quality:"+i; opt.text=label;
+    qualityGroup.appendChild(opt);
+  });
+}
+
+// ✅ โหลด Subtitles
+function loadSubtitles(subtitles){
+  subtitleGroup.innerHTML='<option value="subtitle:none">No Subtitles</option>';
+  subtitles.forEach(sub=>{
+    const opt=document.createElement("option");
+    opt.value="subtitle:"+sub.lang;
+    opt.text=sub.lang.toUpperCase()+" ("+sub.codec+")";
+    subtitleGroup.appendChild(opt);
+  });
+}
+
+// ✅ Event เมื่อเลือก Settings
+settingsSelector.addEventListener("change", ()=>{
+  const val=settingsSelector.value;
+  if(val.startsWith("audio:")){
+    const idx=parseInt(val.split(":")[1]);
+    hls.audioTrack=idx;
+  }
+  if(val.startsWith("quality:")){
+    const idx=parseInt(val.split(":")[1]);
+    hls.currentLevel=idx;
+  }
+  if(val.startsWith("subtitle:")){
+    const lang=val.split(":")[1];
+    Array.from(video.textTracks).forEach(track=>track.mode="disabled");
+    subtitleOverlay.style.display="none";
+    subtitleOverlay.style.opacity="0";
+    if(lang==="none") return;
+    const vttTrack=Array.from(video.textTracks).find(
+      t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+    );
+    if(vttTrack){ vttTrack.mode="showing"; }
+  }
+});
+
 const video=document.getElementById("video");
 document.getElementById("playBtn").addEventListener("click",()=>video.play());
 document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
