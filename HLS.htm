@@ -446,6 +446,8 @@ window.onload = async () => {
         loadAudioTracks(hls);
         loadQualityLevels(hls);
       }
+    } else {
+      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
     }
   }
 
@@ -505,6 +507,8 @@ window.onload = async () => {
       episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
 
       await loadEpisodes(seasonNo, episodeNo);
+    } else {
+      document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลซีรีส์";
     }
   }
 };
