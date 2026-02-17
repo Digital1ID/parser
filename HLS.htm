@@ -111,6 +111,7 @@
   </div>
 
   <div id="controls">
+    <span id="countdown">00:00</span>
     <button id="playPauseBtn">▶️ Play</button>
     <button id="backwardBtn">⏪ -10s</button>
     <button id="forwardBtn">⏩ +10s</button>
@@ -528,7 +529,9 @@ window.onload = async () => {
 <script>
 const video=document.getElementById("video");
 const playPauseBtn=document.getElementById("playPauseBtn");
+const countdown=document.getElementById("countdown");
 
+// ปุ่ม Play/Pause รวมกัน
 playPauseBtn.addEventListener("click",()=>{
   if(video.paused){
     video.play();
@@ -542,6 +545,22 @@ playPauseBtn.addEventListener("click",()=>{
 // อัปเดตปุ่มอัตโนมัติเมื่อสถานะ video เปลี่ยน
 video.addEventListener("play",()=>{ playPauseBtn.textContent="⏸️ Pause"; });
 video.addEventListener("pause",()=>{ playPauseBtn.textContent="▶️ Play"; });
+
+// ฟังก์ชันแปลงวินาทีเป็นรูปแบบ mm:ss หรือ hh:mm:ss
+function formatTime(seconds){
+  const h=Math.floor(seconds/3600);
+  const m=Math.floor((seconds%3600)/60);
+  const s=Math.floor(seconds%60);
+  return (h>0?String(h).padStart(2,"0")+":":"")+
+         String(m).padStart(2,"0")+":"+
+         String(s).padStart(2,"0");
+}
+
+// อัปเดต countdown ทุกครั้งที่เวลาเปลี่ยน
+video.addEventListener("timeupdate",()=>{
+  const remaining=Math.max(0,video.duration-video.currentTime);
+  countdown.textContent=formatTime(remaining);
+});
 
 document.getElementById("muteBtn").addEventListener("click",()=>{
   video.muted=!video.muted;
