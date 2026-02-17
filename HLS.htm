@@ -462,7 +462,7 @@ window.onload = async () => {
     if(show){
       const seasonSelect=document.getElementById("seasonSelect");
       const episodeSelect=document.getElementById("episodeSelect");
-      const topBar=document.getElementById("selectorBar");
+      const selectorBar=document.getElementById("selectorBar"); // ✅ ใช้ชื่อให้ตรง
       selectorBar.style.display="block";
 
       const seasonMap={};
@@ -534,8 +534,36 @@ document.addEventListener("fullscreenchange",()=>{
 // Dropdown Settings toggle
 const settingsBtn=document.getElementById("settingsBtn");
 const dropdown=document.querySelector(".dropdown");
-settingsBtn.addEventListener("click",()=>{ dropdown.classList.toggle("show"); });
-window.addEventListener("click",(e)=>{ if(!dropdown.contains(e.target)){ dropdown.classList.remove("show"); } });
+settingsBtn.addEventListener("click",(e)=>{
+  e.stopPropagation();
+  dropdown.classList.toggle("show");
+});
+window.addEventListener("click",(e)=>{
+  if(!dropdown.contains(e.target)){
+    dropdown.classList.remove("show");
+  }
+});
+
+// ✅ Event binding สำหรับ Audio/Quality/Subtitle
+document.getElementById("audioSelector").addEventListener("change",(e)=>{
+  const idx=parseInt(e.target.value);
+  if(hls) hls.audioTrack=idx;
+});
+document.getElementById("qualitySelector").addEventListener("change",(e)=>{
+  const idx=parseInt(e.target.value);
+  if(hls) hls.currentLevel=idx; // -1 = Auto
+});
+document.getElementById("subtitleSelector").addEventListener("change",(e)=>{
+  const lang=e.target.value;
+  Array.from(video.textTracks).forEach(track=>track.mode="disabled");
+  subtitleOverlay.style.display="none";
+  subtitleOverlay.style.opacity="0";
+  if(lang==="none") return;
+  const vttTrack=Array.from(video.textTracks).find(
+    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+  );
+  if(vttTrack){ vttTrack.mode="showing"; }
+});
 </script>
 
 </body>
