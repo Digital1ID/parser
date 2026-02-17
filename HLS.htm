@@ -303,6 +303,30 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
   });
 }
 
+function loadAudioTracks(hls){
+  const audioSelector=document.getElementById("audioSelector");
+  audioSelector.innerHTML='';
+  hls.audioTracks.forEach((track,i)=>{
+    const opt=document.createElement("option");
+    opt.value=i;
+    opt.text=`${track.name||'Track'} (${track.lang||'und'})`;
+    audioSelector.appendChild(opt);
+  });
+  audioSelector.onchange=()=>{ hls.audioTrack=parseInt(audioSelector.value); };
+}
+
+function loadQualityLevels(hls){
+  const qualitySelector=document.getElementById("qualitySelector");
+  qualitySelector.innerHTML='<option value="-1">Auto</option>';
+  hls.levels.forEach((level,i)=>{
+    const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
+    const opt=document.createElement("option");
+    opt.value=i; opt.text=label;
+    qualitySelector.appendChild(opt);
+  });
+  qualitySelector.onchange=()=>{ hls.currentLevel=parseInt(qualitySelector.value); };
+}
+  
 // --- Movie Parser ---
 async function fetchMovieById(movieId){ 
   const query=`query getMovie($id:Int!){ movie(id:$id){ id titleTh titleEn video{ transcodeUuid cdnHostname subtitleMetadata } } }`;
@@ -417,7 +441,6 @@ function initPlayer(videoURL){
     hls.attachMedia(video);
     hls.loadSource(videoURL);
 
-    // ✅ เติมค่า Audio/Quality หลัง manifest ถูก parse
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
       loadAudioTracks(hls);
       loadQualityLevels(hls);
@@ -440,12 +463,6 @@ window.onload = async () => {
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
       document.getElementById("selectorBar").style.display="none";
-
-      // ✅ เรียกซ้ำเพื่อให้ dropdown เติมค่าแน่นอน
-      if(hls){
-        loadAudioTracks(hls);
-        loadQualityLevels(hls);
-      }
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
     }
@@ -494,12 +511,6 @@ window.onload = async () => {
           document.getElementById("videoTitle").innerText = epData.title;
           seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
           episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
-
-          // ✅ เรียกซ้ำเพื่อให้ dropdown เติมค่าแน่นอน
-          if(hls){
-            loadAudioTracks(hls);
-            loadQualityLevels(hls);
-          }
         }
       }
 
@@ -514,64 +525,43 @@ window.onload = async () => {
 };
 </script>
 
-  <!-- Script Part 3: Controls + Settings Dropdown -->
-  <script>
-    const video=document.getElementById("video");
-    document.getElementById("playBtn").addEventListener("click",()=>video.play());
-    document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
-    document.getElementById("muteBtn").addEventListener("click",()=>{
-      video.muted=!video.muted;
-      document.getElementById("muteBtn").textContent=video.muted?"🔇 Unmute":"🔊 Mute";
-    });
-    document.getElementById("forwardBtn").addEventListener("click",()=>video.currentTime+=10);
-    document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
+<!-- Script Part 3: Controls + Settings Dropdown -->
+<script>
+const video=document.getElementById("video");
+document.getElementById("playBtn").addEventListener("click",()=>video.play());
+document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
+document.getElementById("muteBtn").addEventListener("click",()=>{
+  video.muted=!video.muted;
+  document.getElementById("muteBtn").textContent=video.muted?"🔇 Unmute":"🔊 Mute";
+});
+document.getElementById("forwardBtn").addEventListener("click",()=>video.currentTime+=10);
+document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
 
-    const fullscreenBtn=document.getElementById("fullscreenBtn"); 
-    fullscreenBtn.addEventListener("click",()=>{ 
-      if(!document.fullscreenElement){ 
-        document.body.requestFullscreen(); 
-      } else { 
-        document.exitFullscreen(); 
-      } 
-    }); 
-    document.addEventListener("fullscreenchange",()=>{ 
-      fullscreenBtn.textContent=document.fullscreenElement ? "Exit Fullscreen" : "⛶ Fullscreen"; 
-    });
+const fullscreenBtn=document.getElementById("fullscreenBtn"); 
+fullscreenBtn.addEventListener("click",()=>{ 
+  if(!document.fullscreenElement){ 
+    document.body.requestFullscreen(); 
+  } else { 
+    document.exitFullscreen(); 
+  } 
+}); 
+document.addEventListener("fullscreenchange",()=>{ 
+  fullscreenBtn.textContent=document.fullscreenElement ? "Exit Fullscreen" : "⛶ Fullscreen"; 
+});
 
-    // Dropdown toggle
-    const settingsBtn=document.getElementById("settingsBtn");
-    const dropdown=document.querySelector(".dropdown");
-    settingsBtn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      dropdown.classList.toggle("show");
-    });
-    window.addEventListener("click",(e)=>{
-      if(!dropdown.contains(e.target)){
-        dropdown.classList.remove("show");
-      }
-    });
-
-    // Event binding Audio/Quality/Subtitle
-    document.getElementById("audioSelector").addEventListener("change",(e)=>{
-      const idx=parseInt(e.target.value);
-      if(hls) hls.audioTrack=idx;
-    });
-    document.getElementById("qualitySelector").addEventListener("change",(e)=>{
-      const idx=parseInt(e.target.value);
-      if(hls) hls.currentLevel=idx; // -1 = Auto
-    });
-    document.getElementById("subtitleSelector").addEventListener("change",(e)=>{
-      const lang=e.target.value;
-      Array.from(video.textTracks).forEach(track=>track.mode="disabled");
-      subtitleOverlay.style.display="none";
-      subtitleOverlay.style.opacity="0";
-      if(lang==="none") return;
-      const vttTrack=Array.from(video.textTracks).find(
-        t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
-      );
-      if(vttTrack){ vttTrack.mode="showing"; }
-    });
-  </script>
+// Dropdown toggle
+const settingsBtn=document.getElementById("settingsBtn");
+const dropdown=document.querySelector(".dropdown");
+settingsBtn.addEventListener("click",(e)=>{
+  e.stopPropagation();
+  dropdown.classList.toggle("show");
+});
+window.addEventListener("click",(e)=>{
+  if(!dropdown.contains(e.target)){
+    dropdown.classList.remove("show");
+  }
+});
+</script>
 
 </body>
 </html>
