@@ -539,9 +539,11 @@ window.onload = async () => {
       initPlayer(movie.video);
       renderSubtitleMenu(movie.subtitle);
       document.getElementById("videoTitle").innerText = movie.title;
+      document.title = movie.title;
       document.getElementById("selectorBar").style.display="none";
     } else {
       document.getElementById("videoTitle").innerText = "ไม่พบข้อมูลหนัง";
+      document.title = "ไม่พบข้อมูลซีรีส์";
     }
   }
 
@@ -587,6 +589,7 @@ window.onload = async () => {
           initPlayer(epData.video);
           renderSubtitleMenu(epData.subtitle);
           document.getElementById("videoTitle").innerText = epData.title;
+          document.title = `${show.title} - ${ep.episodeNo} - ${epData.title}`;
           seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
           episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
         }
