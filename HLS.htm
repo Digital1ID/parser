@@ -42,17 +42,15 @@
     }
 #controls {
   position:absolute;
-  bottom:0;
-  left:0;
-  width:100%;
+  bottom:0; left:0; width:100%;
   background:rgba(0,0,0,0.6);
-  color:#fff;
-  padding:10px;
-  display:flex;
-  justify-content:center;
-  gap:12px;
-  z-index:1000;
+  color:#fff; padding:10px;
+  display:flex; justify-content:center; gap:12px;
+  transition:opacity 0.4s ease;
+  opacity:1; z-index:1000;
 }
+#controls.hidden { opacity:0; pointer-events:none; }
+
     select, button {
       padding:8px 14px;
       background:rgba(255,255,255,0.08);
@@ -546,6 +544,8 @@ const video=document.getElementById("video");
 const playPauseBtn=document.getElementById("playPauseBtn");
 const countdown=document.getElementById("countdown");
 const seeker=document.getElementById("seeker");
+const videoContainer=document.getElementById("videoContainer");
+const controls=document.getElementById("controls");
 
 // ปุ่ม Play/Pause รวมกัน
 playPauseBtn.addEventListener("click",()=>{
@@ -595,6 +595,7 @@ seeker.addEventListener("input",()=>{
   }
 });
 
+// ปุ่มอื่น ๆ
 document.getElementById("muteBtn").addEventListener("click",()=>{
   video.muted=!video.muted;
   document.getElementById("muteBtn").textContent=video.muted?"🔇 Unmute":"🔊 Mute";
@@ -602,9 +603,8 @@ document.getElementById("muteBtn").addEventListener("click",()=>{
 document.getElementById("forwardBtn").addEventListener("click",()=>video.currentTime+=10);
 document.getElementById("backwardBtn").addEventListener("click",()=>video.currentTime-=10);
 
+// Fullscreen
 const fullscreenBtn=document.getElementById("fullscreenBtn"); 
-const videoContainer=document.getElementById("videoContainer");
-
 fullscreenBtn.addEventListener("click",()=>{ 
   if(!document.fullscreenElement){ 
     videoContainer.requestFullscreen(); 
@@ -628,7 +628,25 @@ window.addEventListener("click",(e)=>{
     dropdown.classList.remove("show");
   }
 });
+
+// ✅ Auto-hide Controls (Mouse + Touch)
+let hideTimeout=null;
+function showControls(){
+  controls.classList.remove("hidden");
+  clearTimeout(hideTimeout);
+  hideTimeout=setTimeout(()=>{ controls.classList.add("hidden"); },3000);
+}
+videoContainer.addEventListener("mousemove",showControls);
+videoContainer.addEventListener("touchstart",showControls);
+document.addEventListener("fullscreenchange",()=>{
+  if(document.fullscreenElement){
+    showControls();
+  } else {
+    controls.classList.remove("hidden");
+  }
+});
 </script>
 
 </body>
 </html>
+
