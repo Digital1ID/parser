@@ -115,6 +115,13 @@ video{width:100%;height:auto;object-fit:contain;background:#000}
       border-color:#fff;
       transform:scale(1.05);
     }
+#seasonSelect, #episodeSelect {
+  max-width:120px;   /* ✅ จำกัดความกว้างสูงสุด */
+  width:100%;        /* ✅ ให้ปรับตาม container */
+  text-overflow:ellipsis; /* ✅ ตัดข้อความเกินด้วย ... */
+  white-space:nowrap;
+  overflow:hidden;
+}
 .dropdown-content {
   display:none;
   position:absolute;
