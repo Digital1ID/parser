@@ -576,7 +576,8 @@ window.onload = async () => {
         seasonMap[seasonNo].forEach(ep=>{
           const opt=document.createElement("option");
           opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
-          opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+          //opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
+          opt.text=`${ep.titleTh||ep.titleEn}`;
           episodeSelect.appendChild(opt);
         });
 
