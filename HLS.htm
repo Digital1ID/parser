@@ -496,74 +496,8 @@ window.onload = async () => {
 };
 </script>
 
-<!-- Script Part 3: Button Controls -->
+<!-- Script Part 3: Controls -->
 <script>
-const settingsSelector = document.getElementById("settingsSelector");
-const audioGroup = document.getElementById("audioGroup");
-const qualityGroup = document.getElementById("qualityGroup");
-const subtitleGroup = document.getElementById("subtitleGroup");
-
-// ✅ โหลด Audio Tracks
-function loadAudioTracks(hls){
-  audioGroup.innerHTML="";
-  hls.audioTracks.forEach((track,i)=>{
-    const opt=document.createElement("option");
-    opt.value="audio:"+i;
-    opt.text=`${track.name||'Track'} (${track.lang||'und'})`;
-    audioGroup.appendChild(opt);
-  });
-}
-
-// ✅ โหลด Quality Levels
-function loadQualityLevels(hls){
-  qualityGroup.innerHTML="";
-  const autoOpt=document.createElement("option");
-  autoOpt.value="quality:-1"; autoOpt.text="Auto";
-  qualityGroup.appendChild(autoOpt);
-
-  hls.levels.forEach((level,i)=>{
-    const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
-    const opt=document.createElement("option");
-    opt.value="quality:"+i; opt.text=label;
-    qualityGroup.appendChild(opt);
-  });
-}
-
-// ✅ โหลด Subtitles
-function loadSubtitles(subtitles){
-  subtitleGroup.innerHTML='<option value="subtitle:none">No Subtitles</option>';
-  subtitles.forEach(sub=>{
-    const opt=document.createElement("option");
-    opt.value="subtitle:"+sub.lang;
-    opt.text=sub.lang.toUpperCase()+" ("+sub.codec+")";
-    subtitleGroup.appendChild(opt);
-  });
-}
-
-// ✅ Event เมื่อเลือก Settings
-settingsSelector.addEventListener("change", ()=>{
-  const val=settingsSelector.value;
-  if(val.startsWith("audio:")){
-    const idx=parseInt(val.split(":")[1]);
-    hls.audioTrack=idx;
-  }
-  if(val.startsWith("quality:")){
-    const idx=parseInt(val.split(":")[1]);
-    hls.currentLevel=idx;
-  }
-  if(val.startsWith("subtitle:")){
-    const lang=val.split(":")[1];
-    Array.from(video.textTracks).forEach(track=>track.mode="disabled");
-    subtitleOverlay.style.display="none";
-    subtitleOverlay.style.opacity="0";
-    if(lang==="none") return;
-    const vttTrack=Array.from(video.textTracks).find(
-      t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
-    );
-    if(vttTrack){ vttTrack.mode="showing"; }
-  }
-});
-
 const video=document.getElementById("video");
 document.getElementById("playBtn").addEventListener("click",()=>video.play());
 document.getElementById("pauseBtn").addEventListener("click",()=>video.pause());
@@ -585,6 +519,69 @@ fullscreenBtn.addEventListener("click",()=>{
 
 document.addEventListener("fullscreenchange",()=>{ 
   fullscreenBtn.textContent=document.fullscreenElement ? "Exit Fullscreen" : "⛶ Fullscreen"; 
+});
+
+// ✅ Settings Selector รวม Audio, Quality, Subtitle
+const settingsSelector = document.getElementById("settingsSelector");
+const audioGroup = document.getElementById("audioGroup");
+const qualityGroup = document.getElementById("qualityGroup");
+const subtitleGroup = document.getElementById("subtitleGroup");
+
+function loadAudioTracks(hls){
+  audioGroup.innerHTML="";
+  hls.audioTracks.forEach((track,i)=>{
+    const opt=document.createElement("option");
+    opt.value="audio:"+i;
+    opt.text=`${track.name||'Track'} (${track.lang||'und'})`;
+    audioGroup.appendChild(opt);
+  });
+}
+
+function loadQualityLevels(hls){
+  qualityGroup.innerHTML="";
+  const autoOpt=document.createElement("option");
+  autoOpt.value="quality:-1"; autoOpt.text="Auto";
+  qualityGroup.appendChild(autoOpt);
+
+  hls.levels.forEach((level,i)=>{
+    const label=level.height?`${level.height}p`:`${Math.round(level.bitrate/1000)}kbps`;
+    const opt=document.createElement("option");
+    opt.value="quality:"+i; opt.text=label;
+    qualityGroup.appendChild(opt);
+  });
+}
+
+function loadSubtitles(subtitles){
+  subtitleGroup.innerHTML='<option value="subtitle:none">No Subtitles</option>';
+  subtitles.forEach(sub=>{
+    const opt=document.createElement("option");
+    opt.value="subtitle:"+sub.lang;
+    opt.text=sub.lang.toUpperCase()+" ("+sub.codec+")";
+    subtitleGroup.appendChild(opt);
+  });
+}
+
+settingsSelector.addEventListener("change", ()=>{
+  const val=settingsSelector.value;
+  if(val.startsWith("audio:")){
+    const idx=parseInt(val.split(":")[1]);
+    if(window.hls) hls.audioTrack=idx;
+  }
+  if(val.startsWith("quality:")){
+    const idx=parseInt(val.split(":")[1]);
+    if(window.hls) hls.currentLevel=idx;
+  }
+  if(val.startsWith("subtitle:")){
+    const lang=val.split(":")[1];
+    Array.from(video.textTracks).forEach(track=>track.mode="disabled");
+    subtitleOverlay.style.display="none";
+    subtitleOverlay.style.opacity="0";
+    if(lang==="none") return;
+    const vttTrack=Array.from(video.textTracks).find(
+      t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+    );
+    if(vttTrack){ vttTrack.mode="showing"; }
+  }
 });
 </script>
 </body>
