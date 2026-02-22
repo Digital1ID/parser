@@ -98,6 +98,8 @@ function generateJSON(seriesData, statusText) {
           episode: ep.episode,
           name: ep.title,
           video: ep.video || "",
+         : ep.title,
+          video: ep.video || "",
           subtitle: "",
           referrer: "https://anime-good.com/"
         }))
@@ -132,7 +134,11 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
+    // ✅ Name: ใช้ h1 ถ้ามี, fallback เป็น h2
+    let title = doc.querySelector("h1.ez-h1.ez-detail-title")?.textContent.trim();
+    if (!title) {
+      title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
+    }
 
     // ✅ Poster
     let poster = "";
@@ -163,7 +169,7 @@ async function main() {
     let statusText = "";
     const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
     if (breadcrumb) {
-      statusText = breadcrumb.textContent.trim();
+      statusText = breadcrumb.textContent.trim(); // จะได้ "ยังไม่จบ" หรือ "จบแล้ว"
     }
 
     const episodesRaw = extractEpisodesFromMVP(doc);
