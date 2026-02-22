@@ -62,13 +62,25 @@ function convertCodeToM3U8(code) {
   return code ? `https://moji.abcdxzy.xyz:8443/vod/${code}/video.mp4/playlist.m3u8` : null;
 }
 
+// ✅ ดึงเลข Season จาก title
+function extractSeasonNumber(title) {
+  let season = 1; // default
+  const regex = /(season\s*(\d+)|ซีซั่น\s*(\d+)|ภาค\s*(\d+))/i;
+  const match = title.match(regex);
+  if (match) {
+    season = parseInt(match[2] || match[3] || match[4], 10);
+  }
+  return season;
+}
+
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster || "";
   const title = seriesData.title || "ซีรี่ย์ การ์ตูน";
+  const season = seriesData.season || 1;
   for (const ep of seriesData.episodes) {
     if (ep.video) {
-      m3u += `#EXTINF:-1 type="series" tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}" group-title="ซีรี่ย์ การ์ตูน" , ${title} S01 EP${String(ep.episode).padStart(2,"0")}\n`;
+      m3u += `#EXTINF:-1 type="series" tvg-logo="${logo}" tvg-season="${season}" tvg-episode="${ep.episode}" group-title="ซีรี่ย์ การ์ตูน", ${title} S${String(season).padStart(2,"0")} EP${String(ep.episode).padStart(2,"0")}\n`;
       m3u += ep.video + "\n";
     }
   }
@@ -101,8 +113,8 @@ function generateJSON(seriesData, statusText) {
     },
     seasons: [
       {
-        season: 1,
-        name: seriesData.title2 || "Season 1",
+        season: seriesData.season || 1,
+        name: statusText ? ${seriesData.title} (${statusText}) : seriesData.title || "Season" ${seriesData.season || 1},
         info: {
           poster: seriesData.poster || "",
           plot: seriesData.synopsis || "",
@@ -150,12 +162,14 @@ async function main() {
     if (!title) {
       title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
     }
-    
     // ✅ Name: ใช้ h2 ถ้ามี, fallback เป็น h2
     let title2 = doc.querySelector("h2.wp-block-heading")?.textContent.trim();
     if (!title2) {
       title2 = doc.querySelector("h1.ez-h1.ez-detail-title")?.textContent.trim() || id;
     }
+
+    // ✅ Season number
+    const seasonNumber = extractSeasonNumber(title);
 
     // ✅ Poster
     let poster = "";
@@ -182,12 +196,12 @@ async function main() {
       }
     }
 
-// ✅ Breadcrumb status
-let statusText = "";
-const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
-if (breadcrumb) {
-  statusText = breadcrumb.textContent.trim(); // จะได้ "จบแล้ว"
-}
+    // ✅ Breadcrumb status
+    let statusText = "";
+    const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
+    if (breadcrumb) {
+      statusText = breadcrumb.textContent.trim(); // จะได้ "ยังไม่จบ" หรือ "จบแล้ว"
+    }
 
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
@@ -199,9 +213,8 @@ if (breadcrumb) {
       episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
     }
 
-    const seriesData = { id, poster, title, title2, synopsis, episodes };
+    const seriesData = { id, poster, title, title2 synopsis, season: seasonNumber, episodes };
     const m3u = generateM3U(seriesData);
-    const jsonHAT = generateJHAT(seriesData, statusText);
     const jsonData = generateJSON(seriesData, statusText);
 
 output.innerHTML += `
