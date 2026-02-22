@@ -37,26 +37,26 @@ function extractEpisodesFromMVP(doc) {
   return episodes;
 }
 
-// 🔗 Extract embed code จาก iframe
-function extractEmbedCode(doc) {
-  const iframe = doc.querySelector("iframe");
-  if (!iframe) return null;
-  const src = iframe.src;
-  const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
-  return match ? match[1] : null;
-}
+// 🔗 Extract embed code หรือ fallback class
+function extractEmbedCode(doc, epUrl) {
+  // ปกติ: หา iframe
+  let iframe = doc.querySelector("iframe");
+  if (iframe && iframe.src) {
+    const src = iframe.src;
+    const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
+    if (match) return match[1];
+  }
 
-// 📡 ดึง embed code ผ่าน Ajax ถ้าไม่มี iframe ตรง ๆ
-async function fetchEmbedFromAjax(postId) {
-  const ajaxUrl = `https://anime-good.com/wp-admin/admin-ajax.php?storage_type=cookies&storage_data=&action=pvc-check-post&id=${postId}`;
-  const html = await fetchViaProxy(ajaxUrl);
-  if (!html) return null;
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const iframe = doc.querySelector("iframe");
-  if (!iframe) return null;
-  const src = iframe.src;
-  const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
-  return match ? match[1] : null;
+  // Fallback: ใช้ class mpIframe
+  const mpIframe = doc.querySelector(".mpIframe");
+  if (mpIframe) {
+    const className = mpIframe.className;
+    const postIdMatch = className.match(/iframe-([a-zA-Z0-9_-]+)/);
+    if (postIdMatch) return postIdMatch[1];
+  }
+
+  // Fallback สุดท้าย: ใช้ slug ของ episode URL
+  return epUrl.split("/").filter(Boolean).pop();
 }
 
 // แปลง embed code → .m3u8
@@ -111,7 +111,6 @@ function generateJSON(seriesData) {
 }
 
 async function main() {
-  // รองรับหลายซีรีส์ผ่าน ?ids=...
   const params = new URLSearchParams(window.location.search);
   const ids = params.get("ids")?.split(",") || ["yuusha-party-wo-oidasareta-kiyoubinbou"];
   const output = document.getElementById("output");
@@ -127,27 +126,16 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    // ดึงข้อมูลซีรีส์
     const title = doc.querySelector("h2.ep-head-h2")?.textContent.trim() || id;
     const poster = doc.querySelector("img")?.src || "";
     const synopsis = doc.querySelector("p")?.textContent.trim() || "";
 
-    // ดึง episodes
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
     for (const ep of episodesRaw) {
       const epHtml = await fetchViaProxy(ep.url);
       const epDoc = new DOMParser().parseFromString(epHtml, "text/html");
-      let code = extractEmbedCode(epDoc);
-
-      // ถ้าไม่เจอ iframe → ลอง Ajax
-      if (!code) {
-        const postIdMatch = epDoc.querySelector(".mpIframe")?.className.match(/iframe-(\d+)/);
-        if (postIdMatch) {
-          code = await fetchEmbedFromAjax(postIdMatch[1]);
-        }
-      }
-
+      let code = extractEmbedCode(epDoc, ep.url);
       const m3u8 = convertCodeToM3U8(code);
       episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
     }
