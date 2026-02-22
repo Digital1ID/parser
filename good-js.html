@@ -137,7 +137,7 @@ async function main() {
     const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
 
     // ✅ ดึง poster ที่ถูกต้อง
-    const poster = doc.querySelector(".post-thumnail img")?.src || "";
+    const poster = doc.querySelector(".post-thumnail img")?.getAttribute("src") || "";
 
     // ✅ ดึง description ที่ถูกต้อง
     let synopsis = "";
