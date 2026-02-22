@@ -37,25 +37,32 @@ function extractEpisodesFromMVP(doc) {
   return episodes;
 }
 
-// 🔗 Extract embed code หรือ fallback class
+// 🔗 Extract embed code จาก iframe, toolbar, หรือ fallback class
 function extractEmbedCode(doc, epUrl) {
-  // ปกติ: หา iframe
-  let iframe = doc.querySelector("iframe");
+  // 1. iframe ปกติ
+  const iframe = doc.querySelector("iframe");
   if (iframe && iframe.src) {
-    const src = iframe.src;
-    const match = src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
+    const match = iframe.src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
     if (match) return match[1];
   }
 
-  // Fallback: ใช้ class mpIframe
+  // 2. toolbar player (active)
+  const playerItem = doc.querySelector(".toolbar-item.mp-s-sl.active");
+  if (playerItem) {
+    const dataId = playerItem.getAttribute("data-id");
+    const match = dataId.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
+    if (match) return match[1];
+  }
+
+  // 3. fallback class mpIframe
   const mpIframe = doc.querySelector(".mpIframe");
   if (mpIframe) {
     const className = mpIframe.className;
-    const postIdMatch = className.match(/iframe-([a-zA-Z0-9_-]+)/);
+    const postIdMatch = className.match(/iframe-([0-9]+)/);
     if (postIdMatch) return postIdMatch[1];
   }
 
-  // Fallback สุดท้าย: ใช้ slug ของ episode URL
+  // 4. fallback สุดท้าย: ใช้ slug ของ episode URL
   return epUrl.split("/").filter(Boolean).pop();
 }
 
