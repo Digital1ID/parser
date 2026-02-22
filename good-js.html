@@ -8,6 +8,7 @@
     pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
     .series { margin-bottom: 30px; }
     .poster { max-width: 200px; }
+    button { margin: 5px 0; padding: 5px 10px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -105,6 +106,16 @@ function generateJSON(seriesData, statusText) {
   }];
 }
 
+// ✅ ฟังก์ชันคัดลอก
+function copyToClipboard(elementId) {
+  const text = document.getElementById(elementId).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    alert("คัดลอกเรียบร้อยแล้ว!");
+  }).catch(err => {
+    console.error("ไม่สามารถคัดลอกได้:", err);
+  });
+}
+
 async function main() {
   const params = new URLSearchParams(window.location.search);
   const ids = params.get("ids")?.split(",") || ["one-punch-man-season-3-th"];
@@ -121,7 +132,6 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    // ✅ Title
     const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
 
     // ✅ Poster
@@ -156,7 +166,6 @@ async function main() {
       statusText = breadcrumb.textContent.trim();
     }
 
-    // Episodes
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
     for (const ep of episodesRaw) {
@@ -177,9 +186,11 @@ async function main() {
         <img class="poster" src="${poster}" alt="${title}">
         <p>${synopsis}</p>
         <h3>Playlist (.m3u)</h3>
-        <pre>${m3u}</pre>
+        <pre id="m3u-${id}">${m3u}</pre>
+        <button onclick="copyToClipboard('m3u-${id}')">คัดลอก Playlist</button>
         <h3>JSON Data</h3>
-        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+        <pre id="json-${id}">${JSON.stringify(jsonData, null, 2)}</pre>
+        <button onclick="copyToClipboard('json-${id}')">คัดลอก JSON</button>
       </div>
     `;
   }
