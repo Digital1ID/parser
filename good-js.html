@@ -124,7 +124,7 @@ function generateJSON(seriesData, statusText) {
         },
         episodes: seriesData.episodes.map(ep => ({
           episode: ep.episode,
-          name: "ตอนที่" ep.episode || ep.title,
+          name: `ตอนที่ ${ep.episode}` || ep.title,
           video: ep.video || "",
           referrer: "https://anime-good.com/"
         }))
