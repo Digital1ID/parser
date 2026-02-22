@@ -135,8 +135,20 @@ async function main() {
     // ✅ ดึง title
     const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
 
-    // ✅ ดึง poster ที่ถูกต้อง
-    const poster = doc.querySelector(".post-thumnail img")?.getAttribute("src") || "";
+// ✅ ดึง poster ที่ถูกต้อง
+let poster = "";
+const posterImg = doc.querySelector(".post-thumnail img");
+if (posterImg) {
+  poster = posterImg.getAttribute("data-src") 
+        || posterImg.getAttribute("src") 
+        || "";
+  if (poster.startsWith("data:image/svg")) {
+    const noscriptImg = posterImg.parentElement.querySelector("noscript img");
+    if (noscriptImg) {
+      poster = noscriptImg.getAttribute("src") || poster;
+    }
+  }
+}
 
     // ✅ ดึง description ที่ถูกต้อง
     let synopsis = "";
