@@ -168,12 +168,12 @@ async function main() {
       }
     }
 
-    // ✅ Breadcrumb status
-    let statusText = "";
-    const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
-    if (breadcrumb) {
-      statusText = breadcrumb.textContent.trim();
-    }
+// ✅ Breadcrumb status
+let statusText = "";
+const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
+if (breadcrumb) {
+  statusText = breadcrumb.textContent.trim(); // จะได้ "จบแล้ว"
+}
 
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
