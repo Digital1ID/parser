@@ -119,7 +119,7 @@ function generateJSON(seriesData) {
 
 async function main() {
   const params = new URLSearchParams(window.location.search);
-  const ids = params.get("ids")?.split(",") || ["yuusha-party-wo-oidasareta-kiyoubinbou"];
+  const ids = params.get("ids")?.split(",") || ["one-punch-man-season-3-th"];
   const output = document.getElementById("output");
   output.innerHTML = "Loading...";
 
@@ -133,10 +133,23 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    const title = doc.querySelector("h2.ep-head-h2")?.textContent.trim() || id;
-    const poster = doc.querySelector("img")?.src || "";
-    const synopsis = doc.querySelector("p")?.textContent.trim() || "";
+    // ✅ ดึง title
+    const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
 
+    // ✅ ดึง poster ที่ถูกต้อง
+    const poster = doc.querySelector(".post-thumnail img")?.src || "";
+
+    // ✅ ดึง description ที่ถูกต้อง
+    let synopsis = "";
+    const heading = doc.querySelector("h2.wp-block-heading");
+    if (heading) {
+      const nextP = heading.nextElementSibling;
+      if (nextP && nextP.tagName.toLowerCase() === "p") {
+        synopsis = nextP.textContent.trim();
+      }
+    }
+
+    // ดึง episodes
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
     for (const ep of episodesRaw) {
