@@ -132,7 +132,11 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
+    // ✅ Name: ใช้ h1 ถ้ามี, fallback เป็น h2
+    let title = doc.querySelector("h1.ez-h1.ez-detail-title")?.textContent.trim();
+    if (!title) {
+      title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
+    }
 
     // ✅ Poster
     let poster = "";
