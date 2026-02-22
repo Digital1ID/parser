@@ -82,7 +82,7 @@ function generateJSON(seriesData, statusText) {
     category: "ซีรี่ย์ การ์ตูน",
     info: {
       poster: seriesData.poster || "",
-      description: seriesData.synopsis || "",
+      plot: seriesData.synopsis || "",
       year: new Date().getFullYear()
     },
     seasons: [
@@ -91,7 +91,7 @@ function generateJSON(seriesData, statusText) {
         name: seriesData.title2 || "Season 1",
         info: {
           poster: seriesData.poster || "",
-          description: seriesData.synopsis || "",
+          plot: seriesData.synopsis || "",
           year: new Date().getFullYear()
         },
         episodes: seriesData.episodes.map(ep => ({
