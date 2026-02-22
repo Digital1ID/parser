@@ -88,7 +88,7 @@ function generateJSON(seriesData, statusText) {
     seasons: [
       {
         season: 1,
-        name: "Season 1",
+        name: seriesData.title2 || "Season 1",
         info: {
           poster: seriesData.poster || "",
           description: seriesData.synopsis || "",
@@ -98,7 +98,6 @@ function generateJSON(seriesData, statusText) {
           episode: ep.episode,
           name: ep.title,
           video: ep.video || "",
-          subtitle: "",
           referrer: "https://anime-good.com/"
         }))
       }
@@ -136,6 +135,12 @@ async function main() {
     let title = doc.querySelector("h1.ez-h1.ez-detail-title")?.textContent.trim();
     if (!title) {
       title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
+    }
+    
+    // ✅ Name: ใช้ h2 ถ้ามี, fallback เป็น h2
+    let title2 = doc.querySelector("h2.wp-block-heading")?.textContent.trim();
+    if (!title2) {
+      title2 = doc.querySelector("h1.ez-h1.ez-detail-title")?.textContent.trim() || id;
     }
 
     // ✅ Poster
@@ -180,7 +185,7 @@ async function main() {
       episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
     }
 
-    const seriesData = { id, poster, title, synopsis, episodes };
+    const seriesData = { id, poster, title, title2, synopsis, episodes };
     const m3u = generateM3U(seriesData);
     const jsonData = generateJSON(seriesData, statusText);
 
