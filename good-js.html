@@ -189,19 +189,19 @@ async function main() {
     const m3u = generateM3U(seriesData);
     const jsonData = generateJSON(seriesData, statusText);
 
-    output.innerHTML += `
-      <div class="series">
-        <h2>${title}</h2>
-        <img class="poster" src="${poster}" alt="${title}">
-        <p>${synopsis}</p>
-        <h3>Playlist (.m3u)</h3>
-        <pre id="m3u-${id}">${m3u}</pre>
-        <button onclick="copyToClipboard('m3u-${id}')">คัดลอก Playlist</button>
-        <h3>JSON Data</h3>
-        <pre id="json-${id}">${JSON.stringify(jsonData, null, 2)}</pre>
-        <button onclick="copyToClipboard('json-${id}')">คัดลอก JSON</button>
-      </div>
-    `;
+output.innerHTML += `
+  <div class="series">
+    <h2>${title} ${statusText ? "(" + statusText + ")" : ""}</h2>
+    <img class="poster" src="${poster}" alt="${title}">
+    <p>${synopsis}</p>
+    <h3>Playlist (.m3u)</h3>
+    <pre id="m3u-${id}">${m3u}</pre>
+    <button onclick="copyToClipboard('m3u-${id}')">คัดลอก Playlist</button>
+    <h3>JSON Data</h3>
+    <pre id="json-${id}">${JSON.stringify(jsonData, null, 2)}</pre>
+    <button onclick="copyToClipboard('json-${id}')">คัดลอก JSON</button>
+  </div>
+`;
   }
 }
 
