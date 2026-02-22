@@ -217,7 +217,7 @@ async function main() {
 
     const seriesData = { id, poster, title, title2, synopsis, season: seasonNumber, episodes };
     const m3u = generateM3U(seriesData);
-    const jsonData = generateJHAT(seriesData, statusText);
+    const jsonHAT = generateJHAT(seriesData, statusText);
     const jsonData = generateJSON(seriesData, statusText);
 
 output.innerHTML += `
