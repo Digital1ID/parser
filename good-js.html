@@ -65,7 +65,7 @@ function convertCodeToM3U8(code) {
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster || "";
-  const title = seriesData.title || "ซีรีส์";
+  const title = seriesData.title || "ซีรี่ย์ การ์ตูน";
   for (const ep of seriesData.episodes) {
     if (ep.video) {
       m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}", ${title} S01 EP${String(ep.episode).padStart(2,"0")}\n`;
@@ -79,7 +79,7 @@ function generateJSON(seriesData, statusText) {
   return [{
     id: seriesData.id || "",
     name: statusText ? `${seriesData.title} (${statusText})` : seriesData.title || "",
-    category: "อนิเมะ",
+    category: "ซีรี่ย์ การ์ตูน",
     info: {
       poster: seriesData.poster || "",
       description: seriesData.synopsis || "",
