@@ -114,7 +114,9 @@ function generateJSON(seriesData, statusText) {
     seasons: [
       {
         season: seriesData.season || 1,
-        name: statusText ? ${seriesData.title} (${statusText}) : seriesData.title || "Season" ${seriesData.season || 1},
+        name: statusText 
+  ? `${seriesData.title} (${statusText})` 
+  : `Season ${seriesData.season || 1}`,
         info: {
           poster: seriesData.poster || "",
           plot: seriesData.synopsis || "",
@@ -213,7 +215,7 @@ async function main() {
       episodes.push({ episode: ep.episode, title: ep.title, video: m3u8 });
     }
 
-    const seriesData = { id, poster, title, title2 synopsis, season: seasonNumber, episodes };
+    const seriesData = { id, poster, title, title2, synopsis, season: seasonNumber, episodes };
     const m3u = generateM3U(seriesData);
     const jsonData = generateJSON(seriesData, statusText);
 
