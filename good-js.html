@@ -12,7 +12,7 @@
 </head>
 <body>
   <h1>Anime-Good Playlist Parser</h1>
-  <div id="output"></div>
+  <div id="output">Loading...</div>
 
 <script>
 async function fetchViaProxy(url) {
@@ -22,7 +22,6 @@ async function fetchViaProxy(url) {
   return await res.text();
 }
 
-// 📺 Extract episodes จาก ul#MVP
 function extractEpisodesFromMVP(doc) {
   const epItems = doc.querySelectorAll("ul#MVP li.mvp a");
   let episodes = [];
@@ -37,41 +36,31 @@ function extractEpisodesFromMVP(doc) {
   return episodes;
 }
 
-// 🔗 Extract embed code จาก iframe, toolbar, หรือ fallback class
 function extractEmbedCode(doc, epUrl) {
-  // 1. iframe ปกติ
   const iframe = doc.querySelector("iframe");
   if (iframe && iframe.src) {
     const match = iframe.src.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
     if (match) return match[1];
   }
-
-  // 2. toolbar player (active)
   const playerItem = doc.querySelector(".toolbar-item.mp-s-sl.active");
   if (playerItem) {
     const dataId = playerItem.getAttribute("data-id");
     const match = dataId.match(/\/embed\/([a-zA-Z0-9_-]+)\//);
     if (match) return match[1];
   }
-
-  // 3. fallback class mpIframe
   const mpIframe = doc.querySelector(".mpIframe");
   if (mpIframe) {
     const className = mpIframe.className;
     const postIdMatch = className.match(/iframe-([0-9]+)/);
     if (postIdMatch) return postIdMatch[1];
   }
-
-  // 4. fallback สุดท้าย: ใช้ slug ของ episode URL
   return epUrl.split("/").filter(Boolean).pop();
 }
 
-// แปลง embed code → .m3u8
 function convertCodeToM3U8(code) {
   return code ? `https://moji.abcdxzy.xyz:8443/vod/${code}/video.mp4/playlist.m3u8` : null;
 }
 
-// สร้าง playlist .m3u
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster || "";
@@ -85,11 +74,10 @@ function generateM3U(seriesData) {
   return m3u;
 }
 
-// สร้าง JSON Output
-function generateJSON(seriesData) {
+function generateJSON(seriesData, statusText) {
   return [{
     id: seriesData.id || "",
-    name: seriesData.title || "",
+    name: statusText ? `${seriesData.title} (${statusText})` : seriesData.title || "",
     category: "อนิเมะ",
     info: {
       poster: seriesData.poster || "",
@@ -109,6 +97,7 @@ function generateJSON(seriesData) {
           episode: ep.episode,
           name: ep.title,
           video: ep.video || "",
+          subtitle: "",
           referrer: "https://anime-good.com/"
         }))
       }
@@ -132,25 +121,25 @@ async function main() {
 
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    // ✅ ดึง title
+    // ✅ Title
     const title = doc.querySelector("h2.wp-block-heading")?.textContent.trim() || id;
 
-// ✅ ดึง poster ที่ถูกต้อง
-let poster = "";
-const posterImg = doc.querySelector(".post-thumnail img");
-if (posterImg) {
-  poster = posterImg.getAttribute("data-src") 
-        || posterImg.getAttribute("src") 
-        || "";
-  if (poster.startsWith("data:image/svg")) {
-    const noscriptImg = posterImg.parentElement.querySelector("noscript img");
-    if (noscriptImg) {
-      poster = noscriptImg.getAttribute("src") || poster;
+    // ✅ Poster
+    let poster = "";
+    const posterImg = doc.querySelector(".post-thumnail img");
+    if (posterImg) {
+      poster = posterImg.getAttribute("data-src") 
+             || posterImg.getAttribute("src") 
+             || "";
+      if (poster.startsWith("data:image/svg")) {
+        const noscriptImg = posterImg.parentElement.querySelector("noscript img");
+        if (noscriptImg) {
+          poster = noscriptImg.getAttribute("src") || poster;
+        }
+      }
     }
-  }
-}
 
-    // ✅ ดึง description ที่ถูกต้อง
+    // ✅ Description
     let synopsis = "";
     const heading = doc.querySelector("h2.wp-block-heading");
     if (heading) {
@@ -160,7 +149,14 @@ if (posterImg) {
       }
     }
 
-    // ดึง episodes
+    // ✅ Breadcrumb status
+    let statusText = "";
+    const breadcrumb = doc.querySelector("nav.breadcrumb .breadcrumb-item:nth-child(2) span[itemprop='name']");
+    if (breadcrumb) {
+      statusText = breadcrumb.textContent.trim();
+    }
+
+    // Episodes
     const episodesRaw = extractEpisodesFromMVP(doc);
     let episodes = [];
     for (const ep of episodesRaw) {
@@ -173,7 +169,7 @@ if (posterImg) {
 
     const seriesData = { id, poster, title, synopsis, episodes };
     const m3u = generateM3U(seriesData);
-    const jsonData = generateJSON(seriesData);
+    const jsonData = generateJSON(seriesData, statusText);
 
     output.innerHTML += `
       <div class="series">
