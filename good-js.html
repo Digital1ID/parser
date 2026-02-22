@@ -81,6 +81,7 @@ function generateM3U(seriesData) {
   for (const ep of seriesData.episodes) {
     if (ep.video) {
       m3u += `#EXTINF:-1 type="series" tvg-logo="${logo}" tvg-season="${season}" tvg-episode="${ep.episode}" group-title="ซีรี่ย์ การ์ตูน", ${title} S${String(season).padStart(2,"0")} EP${String(ep.episode).padStart(2,"0")}\n`;
+      m3u += `#EXTVLCOPT:http-referrer=https://moji.abcdxzy.xyz/`;
       m3u += ep.video + "\n";
     }
   }
