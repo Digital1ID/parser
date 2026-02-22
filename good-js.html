@@ -75,6 +75,20 @@ function generateM3U(seriesData) {
   return m3u;
 }
 
+function generateJHAT (seriesData, statusText) {
+  return [{
+    player: "p2p/playlist",
+    name: statusText ? `${seriesData.title} (${statusText})` : seriesData.title || "",
+    category: "ซีรี่ย์ การ์ตูน",
+    info: {
+      poster: seriesData.poster || "",
+      plot: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    video: seriesData.id || ""
+  }];
+}
+
 function generateJSON(seriesData, statusText) {
   return [{
     id: seriesData.id || "",
@@ -187,6 +201,7 @@ if (breadcrumb) {
 
     const seriesData = { id, poster, title, title2, synopsis, episodes };
     const m3u = generateM3U(seriesData);
+    const jsonHAT = generateJHAT(seriesData, statusText);
     const jsonData = generateJSON(seriesData, statusText);
 
 output.innerHTML += `
@@ -197,6 +212,9 @@ output.innerHTML += `
     <h3>Playlist (.m3u)</h3>
     <pre id="m3u-${id}">${m3u}</pre>
     <button onclick="copyToClipboard('m3u-${id}')">คัดลอก Playlist</button>
+    <h3>JSON Head</h3>
+    <pre id="json-${id}">${JSON.stringify(jsonData, null, 2)}</pre>
+    <button onclick="copyToClipboard('json-${id}')">คัดลอก JSON</button>
     <h3>JSON Data</h3>
     <pre id="json-${id}">${JSON.stringify(jsonData, null, 2)}</pre>
     <button onclick="copyToClipboard('json-${id}')">คัดลอก JSON</button>
