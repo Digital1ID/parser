@@ -1,250 +1,201 @@
-/* ============================= */
-/* GLOBAL */
-/* ============================= */
+/* =========================
+   BASE
+========================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: #141414;
-  color: #ffffff;
-  margin: 0;
+body{
+  background:#141414;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  margin:0;
 }
 
-/* ============================= */
-/* HEADER */
-/* ============================= */
-
-header {
-  background: rgba(20,20,20,0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+.header{
+  padding:15px;
+  text-align:center;
+  font-size:26px;
+  font-weight:bold;
+  color:#E50914;
 }
 
-header h1 { color: #E50914; }
+.header span{ color:#fff; }
 
-/* ============================= */
-/* PLAYER */
-/* ============================= */
-
-.player {
-  margin: 20px auto;
-  text-align: center;
-  background: #1c1c1c;
-  padding: 20px;
-  border-radius: 12px;
-  width: 92%;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  visibility: hidden;
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: opacity 0.4s ease, max-height 0.4s ease;
+.player{
+  display:none;
+  padding:15px;
+  text-align:center;
 }
 
-.player.active {
-  visibility: visible;
-  opacity: 1;
-  max-height: 1200px;
+.player.active{ display:block; }
+
+.player video{
+  width:100%;
+  max-width:900px;
+  border-radius:12px;
+  border:2px solid #E50914;
 }
 
-.player h2 { color: #E50914; }
-
-video {
-  width: 100%;
-  max-width: 900px;
-  border-radius: 10px;
-  border: 2px solid #E50914;
+.controls{
+  padding:15px;
+  text-align:center;
 }
 
-/* ============================= */
-/* CONTROLS */
-/* ============================= */
-
-.controls {
-  width: 95%;
-  margin: 15px auto;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+.controls input,
+.controls select{
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid #333;
+  background:#222;
+  color:#fff;
+  margin:4px;
 }
 
-select,
-.search-box input {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #444;
-  background: #222;
-  color: #fff;
-  transition: 0.3s;
+
+/* =========================
+   TABLE
+========================= */
+
+#matchesTable{
+  width:100%;
+  border-collapse:collapse;
 }
 
-select:focus,
-.search-box input:focus {
-  outline: none;
-  border-color: #E50914;
-  box-shadow: 0 0 10px rgba(229,9,20,0.5);
+#matchesTable th,
+#matchesTable td{
+  padding:12px;
+  border-bottom:1px solid #222;
+  text-align:center;
+  vertical-align:middle;
 }
 
-.search-box input { width: 220px; }
-
-/* ============================= */
-/* TABLE */
-/* ============================= */
-
-table {
-  width: 95%;
-  margin: 30px auto;
-  border-collapse: collapse;
-  background: linear-gradient(180deg, #1c1c1c, #161616);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.03),
-    0 15px 35px rgba(0,0,0,0.7);
+#matchesTable th{
+  background:#1c1c1c;
 }
 
-thead tr {
-  background: linear-gradient(90deg, #E50914, #b20710);
+.league-header td{
+  background:#1a1a1a;
+  font-weight:bold;
+  text-align:left;
+  padding:10px 15px;
 }
 
-th {
-  padding: 16px 10px;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  font-weight: 700;
+
+/* =========================
+   LOGO
+========================= */
+
+.logo{
+  width:26px;
+  height:26px;
+  object-fit:contain;
+  vertical-align:middle;
+  margin-right:6px;
 }
 
-td {
-  padding: 14px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  text-align: center;
+
+/* =========================
+   STATUS
+========================= */
+
+.status{
+  padding:4px 10px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:bold;
 }
 
-/* Zebra */
-tbody tr:nth-child(even) {
-  background: rgba(255,255,255,0.02);
+.status-live{
+  background:#e50914;
 }
 
-/* ============================= */
-/* TEAM STYLE */
-/* ============================= */
-
-.team-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
+.status-ft{
+  background:#555;
 }
 
-.team_logo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  background: #fff;
-  border-radius: 50%;
-  padding: 2px;
+.status-upcoming{
+  background:#2e7d32;
 }
 
-/* ============================= */
-/* COLLAPSE PREMIUM */
-/* ============================= */
 
-.row-ball {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
+/* =========================
+   CHANNEL
+========================= */
+
+.channel-cell{
+  text-align:left;
 }
 
-.row-ball i {
-  font-size: 20px;
-  color: #ff0000;
-  transition: 0.25s ease;
+.channel-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px;
+  margin-bottom:4px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:0.2s;
+  background:#1e1e1e;
 }
 
-.row-ball.active i {
-  color: #22c55e;
-  transform: rotate(90deg);
+.channel-item:hover{
+  background:#333;
 }
 
-/* collapse row */
-tr.collapse td {
-  padding: 0;
-  background: #1a1a1a;
-  border: none;
+.channel-item img.logo{
+  width:22px;
+  height:22px;
 }
 
-/* animated container */
-.collapse-content {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 0.35s ease;
-  padding: 0 10px;
+
+/* =========================
+   ACTIVE MATCH
+========================= */
+
+.active-match{
+  background:#1f1f1f;
 }
 
-.collapse-content.open {
-  padding: 15px 10px;
-}
 
-/* ช่อง */
-.channel {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  flex-wrap: wrap;
-}
+/* =========================
+   COLLAPSE MODE
+   ใช้ทั้งแนวตั้ง + แนวนอน
+========================= */
 
-.logo-channal {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  background: #fff;
-  border-radius: 8px;
-  padding: 5px;
-  transition: 0.2s;
-}
+@media (max-width:1024px){
 
-.logo-channal:hover {
-  transform: scale(1.1);
-}
-
-/* ============================= */
-/* MOBILE */
-/* ============================= */
-
-@media (max-width: 768px) {
-
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
+  #matchesTable thead{
+    display:none;
   }
 
-  select,
-  .search-box input {
-    width: 100%;
+  #matchesTable tr{
+    display:block;
+    border:1px solid #2a2a2a;
+    margin:12px;
+    border-radius:14px;
+    padding:12px;
+    background:#181818;
   }
 
-  th { display: none; }
-
-  table, tbody, tr, td {
-    display: block;
-    width: 100%;
+  #matchesTable td{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    text-align:left;
   }
 
-  tr {
-    margin-bottom: 15px;
-    border-radius: 12px;
-    background: #1c1c1c;
-    padding: 10px;
+  #matchesTable td::before{
+    content:attr(data-label);
+    font-weight:bold;
+    opacity:0.8;
   }
 
-  td {
-    border: none;
-    padding: 6px 10px;
+  /* 🔥 ซ่อนโลโก้ช่องตอน collapse */
+  .channel-item img.logo{
+    display:none;
   }
+
+  .channel-item{
+    justify-content:flex-end;
+  }
+
 }
