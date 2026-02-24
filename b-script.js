@@ -282,7 +282,7 @@ function appendMatchRow(tbody, match, league) {
 
   matchTr.innerHTML = `
     <td>
-      <img src="${match.homeLogo}" class="logo">
+      <img src="${match.homeLogo}" class="team-logo">
       ${match.homeTeam}
     </td>
 
@@ -291,7 +291,7 @@ function appendMatchRow(tbody, match, league) {
     </td>
 
     <td>
-      <img src="${match.awayLogo}" class="logo">
+      <img src="${match.awayLogo}" class="team-logo">
       ${match.awayTeam}
     </td>
 
