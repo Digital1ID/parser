@@ -245,69 +245,136 @@ select, input{
   object-fit:contain;
 }
 
-/* =========================
-   MOBILE RESPONSIVE
-========================= */
+/* =========================================
+   MOBILE PREMIUM CARD UI
+========================================= */
 
 @media (max-width:768px){
 
+  /* ซ่อนหัวตาราง */
+  thead{
+    display:none;
+  }
+
   table{
-    font-size:13px;
+    border-collapse:separate;
+    border-spacing:0;
   }
 
-  th{
-    display:none; /* ซ่อนหัวตาราง */
-  }
-
-  tr{
+  tbody tr{
     display:block;
-    margin-bottom:12px;
-    background:#1a1a1a;
-    border-radius:10px;
-    padding:10px;
+    background:linear-gradient(145deg,#1c1c1c,#111);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+    border:1px solid #222;
+  }
+
+  /* ซ่อน label table */
+  td::before{
+    display:none !important;
   }
 
   td{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    text-align:left;
-    padding:6px 0;
+    display:block;
+    text-align:center;
     border:none;
+    padding:4px 0;
   }
 
-  td::before{
-    content:attr(data-label);
-    font-weight:600;
-    color:#aaa;
-    margin-right:8px;
-  }
+  /* ================= TEAM LAYOUT ================= */
 
-  /* ทีม */
   .match-row td:first-child,
   .match-row td:nth-child(3){
-    gap:8px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-weight:600;
+    font-size:15px;
   }
 
   .team-logo{
-    width:35px;
-    height:35px;
+    width:50px;
+    height:50px;
   }
 
-  /* ช่อง */
+  /* ================= SCORE ================= */
+
+  .match-row td:nth-child(2){
+    font-size:22px;
+    font-weight:800;
+    margin:10px 0;
+    color:#E50914;
+  }
+
+  /* ================= DATE ================= */
+
+  .match-row td:nth-child(4){
+    font-size:13px;
+    color:#aaa;
+    margin-bottom:6px;
+  }
+
+  /* ================= STATUS ================= */
+
+  .match-row td:nth-child(5){
+    margin-bottom:10px;
+  }
+
+  .status{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:11px;
+    letter-spacing:0.5px;
+  }
+
+  /* ================= BUTTON ================= */
+
+  .toggle-channel-btn{
+    width:100%;
+    margin-top:8px;
+    padding:10px;
+    border-radius:12px;
+    font-size:13px;
+  }
+
+  /* ================= CHANNEL CARD ================= */
+
+  .channel-row{
+    padding:0 !important;
+    background:transparent !important;
+    border:none !important;
+    box-shadow:none !important;
+  }
+
+  .channel-row td{
+    padding:10px 0 0 0;
+  }
+
   .channel-big-wrapper{
-    gap:12px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+
+  .channel-big-item{
+    background:#1f1f1f;
+    border-radius:14px;
+    padding:12px;
+    transition:0.25s;
+  }
+
+  .channel-big-item:hover{
+    transform:scale(1.08);
+    background:#262626;
   }
 
   .channel-big-logo{
-    width:60px;
-    height:60px;
-  }
-
-  /* ปุ่มช่อง */
-  .toggle-channel-btn{
-    font-size:11px;
-    padding:5px 8px;
+    width:65px;
+    height:65px;
   }
 
 }
