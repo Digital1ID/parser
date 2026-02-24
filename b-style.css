@@ -214,3 +214,70 @@ body{
   }
 
 }
+
+/* =========================
+   CHANNEL - LOGO ONLY
+========================= */
+
+/* ซ่อนชื่อช่องทั้งหมด */
+.channel-item{
+  font-size:0;
+}
+
+/* กันกรณีมี span เก็บชื่อ */
+.channel-item span{
+  display:none !important;
+}
+
+/* แสดงเฉพาะโลโก้ */
+.channel-item img.logo{
+  width:22px;
+  height:22px;
+  display:block;
+  margin:auto;
+}
+
+/* =========================
+   TOGGLE BUTTON
+========================= */
+
+.toggle-channel-btn{
+  background:#E50914;
+  border:none;
+  color:#fff;
+  padding:6px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  font-size:13px;
+  margin-left:6px;
+  transition:0.2s;
+}
+
+.toggle-channel-btn:hover{
+  background:#b00610;
+}
+
+/* ซ่อนโลโก้เมื่อปิด */
+.hide-channels .channel-cell{
+  display:none !important;
+}
+
+/* =========================
+   MOBILE GRID 4
+========================= */
+
+@media (max-width:1024px){
+
+  .channel-cell{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:6px;
+    padding-top:8px;
+  }
+
+  .channel-item img.logo{
+    width:28px;
+    height:28px;
+  }
+
+}
