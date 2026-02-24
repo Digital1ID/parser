@@ -342,7 +342,7 @@ tbody tr {
   }
 
   td {
-    text-align: left;
+    text-align: center;
     border: none;
     padding: 6px 10px;
     position: relative;
@@ -356,5 +356,4 @@ tbody tr {
     margin-bottom: 4px;
   }
 }
-
 
