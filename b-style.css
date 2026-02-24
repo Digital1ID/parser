@@ -103,17 +103,9 @@ body{
   font-weight:bold;
 }
 
-.status-live{
-  background:#e50914;
-}
-
-.status-ft{
-  background:#555;
-}
-
-.status-upcoming{
-  background:#2e7d32;
-}
+.status-live{ background:#e50914; }
+.status-ft{ background:#555; }
+.status-upcoming{ background:#2e7d32; }
 
 
 /* =========================
@@ -156,8 +148,7 @@ body{
 
 
 /* =========================
-   COLLAPSE MODE
-   ใช้ทั้งแนวตั้ง + แนวนอน
+   COLLAPSE MODE (Mobile)
 ========================= */
 
 @media (max-width:1024px){
@@ -189,36 +180,37 @@ body{
     opacity:0.8;
   }
 
-  /* 🔥 ซ่อนโลโก้ช่องตอน collapse */
-  .channel-item img.logo{
-    display:none;
+  /* 🔥 ทำ Grid 4 โลโก้ต่อแถว */
+  .channel-cell{
+    display:block;
+  }
+
+  .channel-cell::before{
+    margin-bottom:8px;
+    display:block;
+  }
+
+  .channel-cell{
+    padding-top:10px;
   }
 
   .channel-item{
-    justify-content:flex-end;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:8px;
+    margin:4px;
   }
 
-}
+  .channel-cell{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:6px;
+  }
 
-/* =========================
-   HIDE CHANNEL COLUMN
-========================= */
-
-/* ซ่อนหัวตาราง ช่อง */
-#matchesTable th:last-child{
-  display:none;
-}
-
-/* ซ่อน cell ช่องทั้งหมด */
-.channel-cell{
-  display:none !important;
-}
-
-/* กันกรณี collapse mode */
-@media (max-width:1024px){
-
-  #matchesTable td[data-label="ช่อง"]{
-    display:none !important;
+  .channel-item img.logo{
+    width:28px;
+    height:28px;
   }
 
 }
