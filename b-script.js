@@ -266,7 +266,6 @@ function renderFilteredLeague() {
 
 }
 
-
 // ==============================
 // APPEND MATCH ROW
 // ==============================
@@ -282,21 +281,44 @@ function appendMatchRow(tbody, match, league) {
   const tr = document.createElement("tr");
 
   tr.innerHTML = `
-    <td><img src="${match.homeLogo}" class="logo"> ${match.homeTeam}</td>
-    <td>${match.score !== "-" ? match.score : "VS"}</td>
-    <td><img src="${match.awayLogo}" class="logo"> ${match.awayTeam}</td>
-    <td>${match.date}</td>
-    <td><span class="status ${statusClass}">${displayStatus}</span></td>
-    <td class="channel-cell"
-        onclick="playStream('${match.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr'))">
-        <img src="${match.logo}" class="logo"> ${match.channel}
+    <td data-label="ทีมเหย้า">
+      <img src="${match.homeLogo}" class="logo">
+      ${match.homeTeam}
+    </td>
+
+    <td data-label="สกอร์">
+      ${match.score !== "-" ? match.score : "VS"}
+    </td>
+
+    <td data-label="ทีมเยือน">
+      <img src="${match.awayLogo}" class="logo">
+      ${match.awayTeam}
+    </td>
+
+    <td data-label="วันที่">
+      ${match.date}
+    </td>
+
+    <td data-label="สถานะ">
+      <span class="status ${statusClass}">
+        ${displayStatus}
+      </span>
+    </td>
+
+    <td data-label="ช่อง" class="channel-cell">
+      ${match.channels.map(ch => `
+        <div class="channel-item"
+          onclick="playStream('${ch.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr'))">
+          <img src="${ch.logo}" class="logo">
+          ${ch.channel}
+        </div>
+      `).join("")}
     </td>
   `;
 
   tbody.appendChild(tr);
 
 }
-
 
 // ==============================
 // PLAY STREAM
