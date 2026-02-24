@@ -244,3 +244,70 @@ select, input{
   height:70px;
   object-fit:contain;
 }
+
+/* =========================
+   MOBILE RESPONSIVE
+========================= */
+
+@media (max-width:768px){
+
+  table{
+    font-size:13px;
+  }
+
+  th{
+    display:none; /* ซ่อนหัวตาราง */
+  }
+
+  tr{
+    display:block;
+    margin-bottom:12px;
+    background:#1a1a1a;
+    border-radius:10px;
+    padding:10px;
+  }
+
+  td{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    text-align:left;
+    padding:6px 0;
+    border:none;
+  }
+
+  td::before{
+    content:attr(data-label);
+    font-weight:600;
+    color:#aaa;
+    margin-right:8px;
+  }
+
+  /* ทีม */
+  .match-row td:first-child,
+  .match-row td:nth-child(3){
+    gap:8px;
+  }
+
+  .team-logo{
+    width:35px;
+    height:35px;
+  }
+
+  /* ช่อง */
+  .channel-big-wrapper{
+    gap:12px;
+  }
+
+  .channel-big-logo{
+    width:60px;
+    height:60px;
+  }
+
+  /* ปุ่มช่อง */
+  .toggle-channel-btn{
+    font-size:11px;
+    padding:5px 8px;
+  }
+
+}
