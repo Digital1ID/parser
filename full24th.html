@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Dooball Full Extract API</title>
+</head>
+<body>
+
+<h2>Dooball Stream JSON</h2>
+
+<button onclick="loadAll()">โหลดทั้งหมด</button>
+
+<pre id="output"></pre>
+
+<script>
+
+// config จากเว็บ
+var dooball_obj = {
+    theme:"https://full24th.com/wp-content/themes/dooball",
+    ajaxurl:"https://full24th.com/wp-admin/admin-ajax.php",
+    match_nonce:"ba02bd1531",
+    leagueKey_nonce:"e564c5a12a",
+    favorite_nonce:"25d636002e",
+    tab_nonce:"582ca9cdef",
+    refresh_nonce:"2210a619f9"
+};
+
+
+// proxy แก้ CORS
+const proxy =
+"https://api.allorigins.win/raw?url=";
+
+
+// ดึง HTML
+async function fetchHTML(url) {
+
+    const res = await fetch(proxy + encodeURIComponent(url));
+    return await res.text();
+
+}
+
+
+// ดึง m3u8 จากหน้า dooball
+async function extractM3U8(streamPageUrl) {
+
+    try {
+
+        const html = await fetchHTML(streamPageUrl);
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+
+        const source = doc.querySelector("source");
+
+        return source ? source.src : null;
+
+    } catch {
+
+        return null;
+
+    }
+
+}
+
+
+// โหลด matchToday + stream
+async function loadAll() {
+
+    const matchURL =
+        dooball_obj.theme +
+        "/_ajax_/matchToday.php?_nonce=" +
+        dooball_obj.match_nonce;
+
+
+    const html = await fetchHTML(matchURL);
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    const matches = [];
+
+    let league = "";
+
+
+    const rows =
+        doc.querySelectorAll("#livescore-table tr");
+
+
+    for (const tr of rows) {
+
+        // league header
+        if (tr.classList.contains("league-header")) {
+
+            const el = tr.querySelector(".team-name");
+
+            if (el)
+                league = el.innerText.trim();
+
+            continue;
+        }
+
+
+        const timeEl =
+            tr.querySelector("td:nth-child(2)");
+
+        const teams =
+            tr.querySelectorAll(".team-name");
+
+        const btn =
+            tr.querySelector(".btn-favorite");
+
+
+        if (!timeEl || teams.length < 2 || !btn)
+            continue;
+
+
+        const matchId = btn.dataset.id;
+
+
+        const streamPage =
+            "https://full24th.com/dooball/?id=" +
+            matchId +
+            "&ch=0";
+
+
+        // ดึง m3u8
+        const m3u8 =
+            await extractM3U8(streamPage);
+
+
+        matches.push({
+
+            match_id: matchId,
+
+            league: league,
+
+            time: timeEl.innerText.trim(),
+
+            home: {
+                name: teams[0].innerText.trim(),
+                logo:
+                    teams[0].querySelector("img")?.dataset.src || ""
+            },
+
+            away: {
+                name: teams[1].innerText.trim(),
+                logo:
+                    teams[1].querySelector("img")?.dataset.src || ""
+            },
+
+            stream_page: streamPage,
+
+            stream_m3u8: m3u8
+
+        });
+
+    }
+
+
+
+    const json = {
+
+        status: true,
+
+        generated: new Date().toISOString(),
+
+        total: matches.length,
+
+        nonce: {
+
+            match: dooball_obj.match_nonce,
+            leagueKey: dooball_obj.leagueKey_nonce,
+            favorite: dooball_obj.favorite_nonce,
+            tab: dooball_obj.tab_nonce,
+            refresh: dooball_obj.refresh_nonce
+
+        },
+
+        matches: matches
+
+    };
+
+
+    document.getElementById("output").textContent =
+        JSON.stringify(json, null, 2);
+
+
+    console.log(json);
+
+}
+
+</script>
+
+</body>
+</html>
