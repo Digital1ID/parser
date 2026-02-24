@@ -167,84 +167,6 @@ select, input{
   margin-right:6px;
 }
 
-
-/* ==============================
-   RESPONSIVE
-============================== */
-
-@media (max-width:768px){
-
-  table, thead, tbody, th, td, tr{
-    display:block;
-  }
-
-  thead{
-    display:none;
-  }
-
-  tr{
-    margin-bottom:10px;
-    background:#111827;
-    padding:8px;
-    border-radius:6px;
-  }
-
-  td{
-    text-align:left;
-    padding:4px 0;
-    border:none;
-  }
-
-  td::before{
-    content:attr(data-label);
-    font-weight:bold;
-    display:block;
-    font-size:12px;
-    color:#9ca3af;
-  }
-
-  .league-header{
-    display:block;
-  }
-
-  .league-header td{
-    padding:6px 0;
-  }
-
-}
-
-/* ===== แถวช่องใหม่ ===== */
-
-.channel-row td{
-  background:#0f172a;
-  padding:10px 0;
-}
-
-.channel-big-wrapper{
-  display:flex;
-  gap:15px;
-  justify-content:center;
-  flex-wrap:wrap;
-}
-
-.channel-big-item{
-  cursor:pointer;
-  padding:8px;
-  border-radius:8px;
-  transition:0.2s;
-}
-
-.channel-big-item:hover{
-  background:#1f2937;
-  transform:scale(1.05);
-}
-
-.channel-big-logo{
-  width:70px;
-  height:70px;
-  object-fit:contain;
-}
-
 /* =========================================
    MOBILE PREMIUM CARD UI
 ========================================= */
@@ -376,5 +298,6 @@ select, input{
     width:65px;
     height:65px;
   }
+
 
 }
