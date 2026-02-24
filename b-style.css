@@ -212,3 +212,35 @@ select, input{
   }
 
 }
+
+/* ===== แถวช่องใหม่ ===== */
+
+.channel-row td{
+  background:#0f172a;
+  padding:10px 0;
+}
+
+.channel-big-wrapper{
+  display:flex;
+  gap:15px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.channel-big-item{
+  cursor:pointer;
+  padding:8px;
+  border-radius:8px;
+  transition:0.2s;
+}
+
+.channel-big-item:hover{
+  background:#1f2937;
+  transform:scale(1.05);
+}
+
+.channel-big-logo{
+  width:70px;
+  height:70px;
+  object-fit:contain;
+}
