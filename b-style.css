@@ -1,283 +1,214 @@
-/* =========================
-   BASE
-========================= */
+/* ==============================
+   GLOBAL
+============================== */
 
 body{
-  background:#141414;
+  font-family: Arial, sans-serif;
+  background:#0f172a;
   color:#fff;
-  font-family:Arial, sans-serif;
   margin:0;
+  padding:10px;
 }
 
-.header{
-  padding:15px;
-  text-align:center;
-  font-size:26px;
-  font-weight:bold;
-  color:#E50914;
-}
-
-.header span{ color:#fff; }
-
-.player{
-  display:none;
-  padding:15px;
-  text-align:center;
-}
-
-.player.active{ display:block; }
-
-.player video{
-  width:100%;
-  max-width:900px;
-  border-radius:12px;
-  border:2px solid #E50914;
-}
-
-.controls{
-  padding:15px;
-  text-align:center;
-}
-
-.controls input,
-.controls select{
-  padding:8px 12px;
-  border-radius:8px;
-  border:1px solid #333;
-  background:#222;
-  color:#fff;
-  margin:4px;
-}
-
-
-/* =========================
-   TABLE
-========================= */
-
-#matchesTable{
+table{
   width:100%;
   border-collapse:collapse;
+  font-size:14px;
+  background:#111827;
 }
 
-#matchesTable th,
-#matchesTable td{
-  padding:12px;
-  border-bottom:1px solid #222;
+th, td{
+  padding:6px 8px;
   text-align:center;
-  vertical-align:middle;
+  border-bottom:1px solid #1f2937;
 }
 
-#matchesTable th{
-  background:#1c1c1c;
+tr:hover{
+  background:#1f2937;
 }
-
-.league-header td{
-  background:#1a1a1a;
-  font-weight:bold;
-  text-align:left;
-  padding:10px 15px;
-}
-
-
-/* =========================
-   LOGO
-========================= */
 
 .logo{
-  width:26px;
-  height:26px;
+  width:20px;
+  height:20px;
   object-fit:contain;
   vertical-align:middle;
-  margin-right:6px;
+  margin-right:4px;
 }
 
 
-/* =========================
+/* ==============================
+   LEAGUE HEADER
+============================== */
+
+.league-header td{
+  background:#1e293b;
+  font-weight:bold;
+  text-align:left;
+  padding:8px;
+  font-size:15px;
+}
+
+
+/* ==============================
    STATUS
-========================= */
+============================== */
 
 .status{
-  padding:4px 10px;
-  border-radius:20px;
+  padding:2px 6px;
+  border-radius:4px;
   font-size:12px;
   font-weight:bold;
 }
 
-.status-live{ background:#e50914; }
-.status-ft{ background:#555; }
-.status-upcoming{ background:#2e7d32; }
-
-
-/* =========================
-   CHANNEL
-========================= */
-
-.channel-cell{
-  text-align:left;
+.status-live{
+  background:#dc2626;
+  color:#fff;
 }
 
-.channel-item{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 8px;
-  margin-bottom:4px;
-  border-radius:8px;
-  cursor:pointer;
-  transition:0.2s;
-  background:#1e1e1e;
+.status-ft{
+  background:#16a34a;
+  color:#fff;
 }
 
-.channel-item:hover{
-  background:#333;
-}
-
-.channel-item img.logo{
-  width:22px;
-  height:22px;
+.status-upcoming{
+  background:#2563eb;
+  color:#fff;
 }
 
 
-/* =========================
-   ACTIVE MATCH
-========================= */
-
-.active-match{
-  background:#1f1f1f;
-}
-
-
-/* =========================
-   COLLAPSE MODE (Mobile)
-========================= */
-
-@media (max-width:1024px){
-
-  #matchesTable thead{
-    display:none;
-  }
-
-  #matchesTable tr{
-    display:block;
-    border:1px solid #2a2a2a;
-    margin:12px;
-    border-radius:14px;
-    padding:12px;
-    background:#181818;
-  }
-
-  #matchesTable td{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:8px 0;
-    text-align:left;
-  }
-
-  #matchesTable td::before{
-    content:attr(data-label);
-    font-weight:bold;
-    opacity:0.8;
-  }
-
-  /* 🔥 ทำ Grid 4 โลโก้ต่อแถว */
-  .channel-cell{
-    display:block;
-  }
-
-  .channel-cell::before{
-    margin-bottom:8px;
-    display:block;
-  }
-
-  .channel-cell{
-    padding-top:10px;
-  }
-
-  .channel-item{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    padding:8px;
-    margin:4px;
-  }
-
-  .channel-cell{
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:6px;
-  }
-
-  .channel-item img.logo{
-    width:28px;
-    height:28px;
-  }
-
-}
-
-/* =========================
-   CHANNEL - LOGO ONLY
-========================= */
-
-/* ซ่อนชื่อช่องทั้งหมด */
-.channel-item{
-  font-size:0;
-}
-
-/* กันกรณีมี span เก็บชื่อ */
-.channel-item span{
-  display:none !important;
-}
-
-/* แสดงเฉพาะโลโก้ */
-.channel-item img.logo{
-  width:22px;
-  height:22px;
-  display:block;
-  margin:auto;
-}
-
-/* =========================
-   TOGGLE BUTTON
-========================= */
+/* ==============================
+   CHANNEL TOGGLE
+============================== */
 
 .toggle-channel-btn{
-  background:#E50914;
+  padding:4px 8px;
+  font-size:12px;
   border:none;
-  color:#fff;
-  padding:6px 12px;
-  border-radius:20px;
+  border-radius:4px;
   cursor:pointer;
-  font-size:13px;
-  margin-left:6px;
-  transition:0.2s;
+  background:#374151;
+  color:#fff;
 }
 
 .toggle-channel-btn:hover{
-  background:#b00610;
+  background:#4b5563;
 }
 
-/* ซ่อนโลโก้เมื่อปิด */
-.hide-channels .channel-cell{
-  display:none !important;
+.channel-wrapper{
+  display:none;
+  margin-top:4px;
+  gap:4px;
+  flex-wrap:wrap;
 }
 
-/* =========================
-   MOBILE GRID 4
-========================= */
+.channel-wrapper.show{
+  display:flex;
+}
 
-@media (max-width:1024px){
+.channel-item{
+  cursor:pointer;
+  padding:2px;
+  border-radius:4px;
+  transition:0.2s;
+}
 
-  .channel-cell{
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:6px;
-    padding-top:8px;
+.channel-item:hover{
+  background:#1f2937;
+}
+
+
+/* ==============================
+   ACTIVE MATCH
+============================== */
+
+.active-match{
+  background:#0c4a6e !important;
+}
+
+
+/* ==============================
+   PLAYER BOX
+============================== */
+
+#playerBox{
+  display:none;
+  margin-bottom:15px;
+  background:#111827;
+  padding:10px;
+  border-radius:6px;
+}
+
+#playerBox.active{
+  display:block;
+}
+
+#playerBox h2{
+  font-size:16px;
+  margin:0 0 8px 0;
+}
+
+#videoPlayer{
+  width:100%;
+  border-radius:6px;
+}
+
+
+/* ==============================
+   SEARCH + SELECT
+============================== */
+
+select, input{
+  padding:5px;
+  border-radius:4px;
+  border:1px solid #374151;
+  background:#1f2937;
+  color:#fff;
+  font-size:13px;
+  margin-right:6px;
+}
+
+
+/* ==============================
+   RESPONSIVE
+============================== */
+
+@media (max-width:768px){
+
+  table, thead, tbody, th, td, tr{
+    display:block;
   }
 
-  .channel-item img.logo{
-    width:28px;
-    height:28px;
+  thead{
+    display:none;
+  }
+
+  tr{
+    margin-bottom:10px;
+    background:#111827;
+    padding:8px;
+    border-radius:6px;
+  }
+
+  td{
+    text-align:left;
+    padding:4px 0;
+    border:none;
+  }
+
+  td::before{
+    content:attr(data-label);
+    font-weight:bold;
+    display:block;
+    font-size:12px;
+    color:#9ca3af;
+  }
+
+  .league-header{
+    display:block;
+  }
+
+  .league-header td{
+    padding:6px 0;
   }
 
 }
