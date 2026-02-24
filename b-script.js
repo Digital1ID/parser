@@ -66,7 +66,7 @@ async function parseMatches() {
       const homeTeam = container.querySelector("div.text-end p")?.textContent.trim() || "ทีมเหย้า";
       const awayTeam = container.querySelector("div.text-start p")?.textContent.trim() || "ทีมเยือน";
 
-      const leagueNode = container.closest("div.col-lg-12")
+      const leagueNode = container.closest(".col-lg-12")
         ?.previousElementSibling
         ?.querySelector("strong.text-uppercase");
 
@@ -74,7 +74,11 @@ async function parseMatches() {
         ? leagueNode.textContent.trim().replace("|", ":")
         : "ไม่ระบุลีก";
 
-      const dateNode = container.closest("div").querySelector("b.fs-4");
+      // 🔥 FIX DATE ไม่ให้ดึงผิด block
+      const dateNode = container.closest(".col-lg-12")
+        ?.previousElementSibling
+        ?.querySelector("b.fs-4");
+
       const thaiDate = dateNode
         ? dateNode.textContent.trim()
         : new Date().toLocaleDateString("th-TH");
@@ -87,34 +91,27 @@ async function parseMatches() {
       const scoreText = scoreNode ? scoreNode.textContent.trim() : "-";
 
       const streams = container.querySelectorAll("img.iam-list-tv");
-      const seenChannels = new Set();
 
-      streams.forEach(stream => {
+      const matchKey = homeTeam + "_" + awayTeam + "_" + thaiDate;
 
-        const channel = stream.getAttribute("alt");
-        if (seenChannels.has(channel)) return;
-        seenChannels.add(channel);
+      if (!leagueMap[leagueFull]) {
+        leagueMap[leagueFull] = [];
 
-        let url = stream.getAttribute("data-url");
-        const logo = stream.getAttribute("src");
-        if (!url) return;
-
-        url = url.replace(":443", "").replace("/dooballfree-com/", "/do-ball.com/");
-
-        if (!leagueMap[leagueFull]) {
-
-          leagueMap[leagueFull] = [];
-
-          if (![...leagueSelect.options].some(opt => opt.value === leagueFull)) {
-            const opt = document.createElement("option");
-            opt.value = leagueFull;
-            opt.textContent = leagueFull;
-            leagueSelect.appendChild(opt);
-          }
-
+        if (![...leagueSelect.options].some(opt => opt.value === leagueFull)) {
+          const opt = document.createElement("option");
+          opt.value = leagueFull;
+          opt.textContent = leagueFull;
+          leagueSelect.appendChild(opt);
         }
+      }
 
-        leagueMap[leagueFull].push({
+      let existingMatch = leagueMap[leagueFull]
+        .find(m => m.matchKey === matchKey);
+
+      if (!existingMatch) {
+
+        existingMatch = {
+          matchKey,
           homeTeam,
           awayTeam,
           homeLogo,
@@ -122,6 +119,29 @@ async function parseMatches() {
           date: thaiDate,
           status: statusText,
           score: scoreText,
+          channels: []
+        };
+
+        leagueMap[leagueFull].push(existingMatch);
+      }
+
+      const seenChannels = new Set();
+
+      streams.forEach(stream => {
+
+        const channel = stream.getAttribute("alt");
+        if (!channel || seenChannels.has(channel)) return;
+
+        seenChannels.add(channel);
+
+        let url = stream.getAttribute("data-url");
+        const logo = stream.getAttribute("src");
+        if (!url) return;
+
+        url = url.replace(":443", "")
+                 .replace("/dooballfree-com/", "/do-ball.com/");
+
+        existingMatch.channels.push({
           channel,
           logo,
           url
@@ -149,7 +169,6 @@ async function parseMatches() {
   }
 
 }
-
 
 // ==============================
 // STATUS FORMAT
