@@ -199,3 +199,26 @@ body{
   }
 
 }
+
+/* =========================
+   HIDE CHANNEL COLUMN
+========================= */
+
+/* ซ่อนหัวตาราง ช่อง */
+#matchesTable th:last-child{
+  display:none;
+}
+
+/* ซ่อน cell ช่องทั้งหมด */
+.channel-cell{
+  display:none !important;
+}
+
+/* กันกรณี collapse mode */
+@media (max-width:1024px){
+
+  #matchesTable td[data-label="ช่อง"]{
+    display:none !important;
+  }
+
+}
