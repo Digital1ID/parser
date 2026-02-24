@@ -190,15 +190,45 @@ th:nth-child(5), td:nth-child(5) { width: 10%; }  /* สถานะ */
 th:nth-child(6), td:nth-child(6) { width: 20%; }  /* ช่อง */
 
 /* ============================= */
-/* TEAM STYLE */
+/* CENTER LOGO PERFECTLY */
 /* ============================= */
 
+/* ทำให้ td จัดกลางจริง */
+td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* ============================= */
+/* TEAM STYLE */
+/* ============================= */
+/* จัด team cell ให้อยู่กลาง 100% */
 .team-cell {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  flex-direction: column;   /* ให้ชื่ออยู่ใต้ logo */
+  align-items: center;      /* กลางแนวนอน */
+  justify-content: center;  /* กลางแนวตั้ง */
+  text-align: center;
+  width: 100%;
 }
+
+/* จัด logo ให้อยู่กลางจริง */
+.team-cell img,
+td img.logo {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 4px;
+}
+
+/* ป้องกันการเบี้ยว */
+.logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+
 
 .logo {
   width: 56px;
@@ -335,38 +365,3 @@ tbody tr {
   }
 }
 
-/* ============================= */
-/* CENTER LOGO PERFECTLY */
-/* ============================= */
-
-/* ทำให้ td จัดกลางจริง */
-td {
-  text-align: center;
-  vertical-align: middle;
-}
-
-/* จัด team cell ให้อยู่กลาง 100% */
-.team-cell {
-  display: flex;
-  flex-direction: column;   /* ให้ชื่ออยู่ใต้ logo */
-  align-items: center;      /* กลางแนวนอน */
-  justify-content: center;  /* กลางแนวตั้ง */
-  text-align: center;
-  width: 100%;
-}
-
-/* จัด logo ให้อยู่กลางจริง */
-.team-cell img,
-td img.logo {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 4px;
-}
-
-/* ป้องกันการเบี้ยว */
-.logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-}
