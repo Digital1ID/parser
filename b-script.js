@@ -273,9 +273,14 @@ function appendMatchRow(tbody, match, league) {
   if (!filterByStatus(statusFilter, displayStatus)) return;
 
   const statusClass = getStatusClass(displayStatus);
-  const tr = document.createElement("tr");
 
-  tr.innerHTML = `
+  // ========================
+  // แถวแมตช์
+  // ========================
+  const matchTr = document.createElement("tr");
+  matchTr.classList.add("match-row");
+
+  matchTr.innerHTML = `
     <td>
       <img src="${match.homeLogo}" class="logo">
       ${match.homeTeam}
@@ -299,24 +304,42 @@ function appendMatchRow(tbody, match, league) {
     </td>
 
     <td>
-      <button class="toggle-channel-btn" onclick="toggleChannelRow(this)">
-        ช่อง
+      <button class="toggle-channel-btn">
+        ช่อง (${match.channels.length})
       </button>
+    </td>
+  `;
 
-      <div class="channel-wrapper">
+  // ========================
+  // แถวช่อง (ใหม่)
+  // ========================
+  const channelTr = document.createElement("tr");
+  channelTr.classList.add("channel-row");
+  channelTr.style.display = "none";
+
+  channelTr.innerHTML = `
+    <td colspan="6">
+      <div class="channel-big-wrapper">
         ${match.channels.map(ch => `
-          <div class="channel-item"
-            onclick="playStream('${ch.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr'))">
-            <img src="${ch.logo}" class="logo">
+          <div class="channel-big-item"
+            onclick="playStream('${ch.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr').previousElementSibling)">
+            <img src="${ch.logo}" class="channel-big-logo">
           </div>
         `).join("")}
       </div>
     </td>
   `;
 
-  tbody.appendChild(tr);
-}
+  // ปุ่ม toggle
+  matchTr.querySelector(".toggle-channel-btn")
+    .addEventListener("click", () => {
+      channelTr.style.display =
+        channelTr.style.display === "none" ? "table-row" : "none";
+    });
 
+  tbody.appendChild(matchTr);
+  tbody.appendChild(channelTr);
+}
 
 // ==============================
 // TOGGLE CHANNEL ROW
