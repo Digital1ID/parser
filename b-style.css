@@ -18,21 +18,38 @@ table{
 }
 
 th, td{
-  padding:6px 8px;
+  padding:10px 8px;
   text-align:center;
   border-bottom:1px solid #1f2937;
+  vertical-align:middle;
+}
+
+thead{
+  background:#1e293b;
 }
 
 tr:hover{
   background:#1f2937;
 }
 
-.logo{
-  width:20px;
-  height:20px;
+
+/* ==============================
+   TEAM CELL
+============================== */
+
+.match-row td:first-child,
+.match-row td:nth-child(3){
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-start;
+}
+
+.team-logo{
+  width:40px;
+  height:40px;
   object-fit:contain;
-  vertical-align:middle;
-  margin-right:4px;
+  flex-shrink:0;
 }
 
 
@@ -44,7 +61,7 @@ tr:hover{
   background:#1e293b;
   font-weight:bold;
   text-align:left;
-  padding:8px;
+  padding:10px;
   font-size:15px;
 }
 
@@ -54,8 +71,8 @@ tr:hover{
 ============================== */
 
 .status{
-  padding:2px 6px;
-  border-radius:4px;
+  padding:4px 8px;
+  border-radius:6px;
   font-size:12px;
   font-weight:bold;
 }
@@ -77,43 +94,64 @@ tr:hover{
 
 
 /* ==============================
-   CHANNEL TOGGLE
+   CHANNEL BUTTON
 ============================== */
 
 .toggle-channel-btn{
-  padding:4px 8px;
+  padding:6px 10px;
   font-size:12px;
   border:none;
-  border-radius:4px;
+  border-radius:6px;
   cursor:pointer;
   background:#374151;
   color:#fff;
+  transition:0.2s;
 }
 
 .toggle-channel-btn:hover{
   background:#4b5563;
 }
 
-.channel-wrapper{
-  display:none;
-  margin-top:4px;
-  gap:4px;
-  flex-wrap:wrap;
+
+/* ==============================
+   CHANNEL ROW (DESKTOP CLEAN)
+============================== */
+
+.channel-row td{
+  background:#0f172a;
+  padding:16px 10px;
+  text-align:center;
 }
 
-.channel-wrapper.show{
-  display:flex;
+/* ใช้ Grid เรียงสวย */
+.channel-big-wrapper{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
+  gap:16px;
+  max-width:800px;
+  margin:0 auto;
 }
 
-.channel-item{
-  cursor:pointer;
-  padding:2px;
-  border-radius:4px;
-  transition:0.2s;
-}
-
-.channel-item:hover{
+.channel-big-item{
   background:#1f2937;
+  border-radius:12px;
+  padding:12px;
+  cursor:pointer;
+  transition:0.25s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.channel-big-item:hover{
+  background:#374151;
+  transform:translateY(-3px);
+}
+
+.channel-big-logo{
+  width:60px;
+  height:60px;
+  object-fit:contain;
 }
 
 
@@ -132,10 +170,10 @@ tr:hover{
 
 #playerBox{
   display:none;
-  margin-bottom:15px;
+  margin-bottom:20px;
   background:#111827;
-  padding:10px;
-  border-radius:6px;
+  padding:15px;
+  border-radius:8px;
 }
 
 #playerBox.active{
@@ -144,12 +182,12 @@ tr:hover{
 
 #playerBox h2{
   font-size:16px;
-  margin:0 0 8px 0;
+  margin-bottom:10px;
 }
 
 #videoPlayer{
   width:100%;
-  border-radius:6px;
+  border-radius:8px;
 }
 
 
@@ -158,8 +196,8 @@ tr:hover{
 ============================== */
 
 select, input{
-  padding:5px;
-  border-radius:4px;
+  padding:6px 10px;
+  border-radius:6px;
   border:1px solid #374151;
   background:#1f2937;
   color:#fff;
@@ -167,137 +205,57 @@ select, input{
   margin-right:6px;
 }
 
-/* =========================================
-   MOBILE PREMIUM CARD UI
-========================================= */
+
+/* ==============================
+   MOBILE (SIMPLE VERSION)
+============================== */
 
 @media (max-width:768px){
 
-  /* ซ่อนหัวตาราง */
-  thead{
+  table{
+    font-size:13px;
+  }
+
+  th{
     display:none;
   }
 
-  table{
-    border-collapse:separate;
-    border-spacing:0;
-  }
-
-  tbody tr{
+  tr{
     display:block;
-    background:linear-gradient(145deg,#1c1c1c,#111);
-    border-radius:16px;
-    padding:16px;
-    margin-bottom:16px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.4);
-    border:1px solid #222;
-  }
-
-  /* ซ่อน label table */
-  td::before{
-    display:none !important;
+    margin-bottom:12px;
+    background:#111827;
+    padding:10px;
+    border-radius:8px;
   }
 
   td{
     display:block;
-    text-align:center;
+    text-align:left;
+    padding:6px 0;
     border:none;
-    padding:4px 0;
   }
 
-  /* ================= TEAM LAYOUT ================= */
-
-  .match-row td:first-child,
-  .match-row td:nth-child(3){
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    font-weight:600;
-    font-size:15px;
+  td::before{
+    content:attr(data-label);
+    font-weight:bold;
+    display:block;
+    font-size:12px;
+    color:#9ca3af;
+    margin-bottom:2px;
   }
 
   .team-logo{
-    width:50px;
-    height:50px;
-  }
-
-  /* ================= SCORE ================= */
-
-  .match-row td:nth-child(2){
-    font-size:22px;
-    font-weight:800;
-    margin:10px 0;
-    color:#E50914;
-  }
-
-  /* ================= DATE ================= */
-
-  .match-row td:nth-child(4){
-    font-size:13px;
-    color:#aaa;
-    margin-bottom:6px;
-  }
-
-  /* ================= STATUS ================= */
-
-  .match-row td:nth-child(5){
-    margin-bottom:10px;
-  }
-
-  .status{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:999px;
-    font-size:11px;
-    letter-spacing:0.5px;
-  }
-
-  /* ================= BUTTON ================= */
-
-  .toggle-channel-btn{
-    width:100%;
-    margin-top:8px;
-    padding:10px;
-    border-radius:12px;
-    font-size:13px;
-  }
-
-  /* ================= CHANNEL CARD ================= */
-
-  .channel-row{
-    padding:0 !important;
-    background:transparent !important;
-    border:none !important;
-    box-shadow:none !important;
-  }
-
-  .channel-row td{
-    padding:10px 0 0 0;
+    width:32px;
+    height:32px;
   }
 
   .channel-big-wrapper{
-    display:grid;
     grid-template-columns:repeat(3,1fr);
-    gap:14px;
-  }
-
-  .channel-big-item{
-    background:#1f1f1f;
-    border-radius:14px;
-    padding:12px;
-    transition:0.25s;
-  }
-
-  .channel-big-item:hover{
-    transform:scale(1.08);
-    background:#262626;
   }
 
   .channel-big-logo{
-    width:65px;
-    height:65px;
+    width:50px;
+    height:50px;
   }
-
 
 }
