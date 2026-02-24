@@ -21,6 +21,9 @@
 
   <!-- HLS -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <!-- Custom JS -->
+  <script src="b-script.js" defer></script>
 </head>
 
 <body class="bg-[#141414] text-white font-[Inter]">
@@ -44,48 +47,50 @@
 
 
 <!-- ================= PLAYER ================= -->
-<section class="player hidden" id="playerBox">
-  <h2 class="text-xl font-bold mb-4 text-[#E50914] text-center">
+<section id="playerBox" class="hidden max-w-6xl mx-auto mt-6 px-4">
+  <h2 id="playerTitle" class="text-xl font-bold mb-4 text-[#E50914] text-center">
     ⚽ ตัวเล่นวิดีโอ
   </h2>
+
   <div class="flex justify-center">
-    <video id="videoPlayer" controls class="w-full max-w-4xl rounded-lg border-2 border-[#E50914]"></video>
+    <video id="videoPlayer"
+      controls
+      class="w-full max-w-4xl rounded-lg border-2 border-[#E50914]">
+    </video>
   </div>
 </section>
 
 
 <!-- ================= CONTROLS ================= -->
-<section class="controls">
+<section class="max-w-6xl mx-auto px-4 mt-6 flex flex-wrap gap-3 items-center">
 
-  <select id="leagueSelect">
+  <select id="leagueSelect" class="bg-[#1f1f1f] border border-[#333] rounded px-3 py-2 text-sm">
     <option value="all">ทุกลีก</option>
   </select>
 
-  <select id="statusSelect">
+  <select id="statusSelect" class="bg-[#1f1f1f] border border-[#333] rounded px-3 py-2 text-sm">
     <option value="all">ทุกสถานะ</option>
     <option value="LIVE">LIVE</option>
     <option value="FT">FT</option>
     <option value="UPCOMING">ยังไม่แข่ง</option>
   </select>
 
-  <div class="search-box">
-    <input
-      type="text"
-      id="searchInput"
-      placeholder="ค้นหาทีม/ลีก..."
-      onkeyup="filterTable()">
-  </div>
-
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="ค้นหาทีม/ลีก..."
+    onkeyup="filterTable()"
+    class="flex-1 min-w-[180px] bg-[#1f1f1f] border border-[#333] rounded px-3 py-2 text-sm">
 </section>
 
 
 <!-- ================= TABLE ================= -->
-<section class="w-full">
-  <table id="matchesTable">
+<section class="max-w-6xl mx-auto px-4 mt-6 mb-16 overflow-x-auto">
+  <table id="matchesTable" class="w-full text-sm">
 
-    <thead>
+    <thead class="bg-[#1f1f1f]">
       <tr>
-        <th>ทีมเหย้า</th>
+        <th class="py-3">ทีมเหย้า</th>
         <th>สกอร์</th>
         <th>ทีมเยือน</th>
         <th>วันที่ / เวลา</th>
@@ -104,10 +109,6 @@
 
   </table>
 </section>
-
-
-<!-- ================= SCRIPT ================= -->
-<script src="b-script.js"></script>
 
 </body>
 </html>
