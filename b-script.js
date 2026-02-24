@@ -74,7 +74,6 @@ async function parseMatches() {
         ? leagueNode.textContent.trim().replace("|", ":")
         : "ไม่ระบุลีก";
 
-      // 🔥 FIX DATE ไม่ให้ดึงผิด block
       const dateNode = container.closest(".col-lg-12")
         ?.previousElementSibling
         ?.querySelector("b.fs-4");
@@ -125,14 +124,11 @@ async function parseMatches() {
         leagueMap[leagueFull].push(existingMatch);
       }
 
-      const seenChannels = new Set();
-
+      // 🔥 ป้องกัน channel ซ้ำระดับ match
       streams.forEach(stream => {
 
         const channel = stream.getAttribute("alt");
-        if (!channel || seenChannels.has(channel)) return;
-
-        seenChannels.add(channel);
+        if (!channel) return;
 
         let url = stream.getAttribute("data-url");
         const logo = stream.getAttribute("src");
@@ -140,6 +136,8 @@ async function parseMatches() {
 
         url = url.replace(":443", "")
                  .replace("/dooballfree-com/", "/do-ball.com/");
+
+        if (existingMatch.channels.some(c => c.channel === channel)) return;
 
         existingMatch.channels.push({
           channel,
@@ -170,6 +168,7 @@ async function parseMatches() {
 
 }
 
+
 // ==============================
 // STATUS FORMAT
 // ==============================
@@ -179,14 +178,9 @@ function formatStatus(statusText) {
   const raw = statusText ? statusText.trim().toUpperCase() : "";
 
   if (raw === "FT") return "FT";
-
-  if (/^\d{1,2}[:.]\d{2}$/.test(raw))
-    return raw.replace(".", ":");
-
+  if (/^\d{1,2}[:.]\d{2}$/.test(raw)) return raw.replace(".", ":");
   if (raw.includes("LIVE")) return "LIVE";
-
-  if (raw === "" || raw === "-")
-    return "LIVE";
+  if (raw === "" || raw === "-") return "LIVE";
 
   return raw;
 }
@@ -266,6 +260,7 @@ function renderFilteredLeague() {
 
 }
 
+
 // ==============================
 // APPEND MATCH ROW
 // ==============================
@@ -281,44 +276,57 @@ function appendMatchRow(tbody, match, league) {
   const tr = document.createElement("tr");
 
   tr.innerHTML = `
-    <td data-label="ทีมเหย้า">
+    <td>
       <img src="${match.homeLogo}" class="logo">
       ${match.homeTeam}
     </td>
 
-    <td data-label="สกอร์">
+    <td>
       ${match.score !== "-" ? match.score : "VS"}
     </td>
 
-    <td data-label="ทีมเยือน">
+    <td>
       <img src="${match.awayLogo}" class="logo">
       ${match.awayTeam}
     </td>
 
-    <td data-label="วันที่">
-      ${match.date}
-    </td>
+    <td>${match.date}</td>
 
-    <td data-label="สถานะ">
+    <td>
       <span class="status ${statusClass}">
         ${displayStatus}
       </span>
     </td>
 
-    <td data-label="ช่อง" class="channel-cell">
-      ${match.channels.map(ch => `
-        <div class="channel-item"
-          onclick="playStream('${ch.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr'))">
-          <img src="${ch.logo}" class="logo">
-          ${ch.channel}
-        </div>
-      `).join("")}
+    <td>
+      <button class="toggle-channel-btn" onclick="toggleChannelRow(this)">
+        ช่อง
+      </button>
+
+      <div class="channel-wrapper">
+        ${match.channels.map(ch => `
+          <div class="channel-item"
+            onclick="playStream('${ch.url}','${match.homeTeam}','${match.awayTeam}','${league}',this.closest('tr'))">
+            <img src="${ch.logo}" class="logo">
+          </div>
+        `).join("")}
+      </div>
     </td>
   `;
 
   tbody.appendChild(tr);
-
 }
+
+
+// ==============================
+// TOGGLE CHANNEL ROW
+// ==============================
+
+function toggleChannelRow(btn) {
+  const wrapper = btn.nextElementSibling;
+  wrapper.classList.toggle("show");
+}
+
 
 // ==============================
 // PLAY STREAM
@@ -357,7 +365,6 @@ function playStream(url, homeTeam, awayTeam, league, rowElement) {
   if (rowElement) rowElement.classList.add("active-match");
 
   playerBox.scrollIntoView({ behavior: "smooth", block: "center" });
-
 }
 
 
@@ -425,7 +432,3 @@ document.addEventListener("DOMContentLoaded", async () => {
   startAutoRefresh();
 
 });
-
-function toggleChannels(){
-  document.body.classList.toggle("hide-channels");
-}
