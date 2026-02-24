@@ -53,12 +53,35 @@ async function parseMatches() {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlText, "text/html");
 
-    const containers = doc.querySelectorAll("div.row.gy-3");
     const leagueSelect = document.getElementById("leagueSelect");
 
     Object.keys(leagueMap).forEach(key => delete leagueMap[key]);
 
-    containers.forEach(container => {
+    // 🔥 ดึงทุก element ตามลำดับจริง
+    const allRows = doc.querySelectorAll("div.row");
+
+    let currentDate = new Date().toLocaleDateString("th-TH");
+
+    allRows.forEach(row => {
+
+      // =============================
+      // CHECK DATE BLOCK
+      // =============================
+
+      const dateNode = row.querySelector("b.fs-4");
+
+      if (dateNode) {
+        currentDate = dateNode.textContent.trim();
+        return;
+      }
+
+      // =============================
+      // CHECK MATCH BLOCK
+      // =============================
+
+      if (!row.classList.contains("gy-3")) return;
+
+      const container = row;
 
       const statusNode = container.querySelector("div.col-lg-1 div, div.col-lg-1 span");
       const statusText = statusNode ? statusNode.textContent.trim() : "-";
@@ -74,13 +97,7 @@ async function parseMatches() {
         ? leagueNode.textContent.trim().replace("|", ":")
         : "ไม่ระบุลีก";
 
-      const dateNode = container.closest(".col-lg-12")
-        ?.previousElementSibling
-        ?.querySelector("b.fs-4");
-
-      const thaiDate = dateNode
-        ? dateNode.textContent.trim()
-        : new Date().toLocaleDateString("th-TH");
+      const thaiDate = currentDate;
 
       const images = container.querySelectorAll("img");
       const homeLogo = images[0]?.src || "";
@@ -94,14 +111,18 @@ async function parseMatches() {
       const matchKey = homeTeam + "_" + awayTeam + "_" + thaiDate;
 
       if (!leagueMap[leagueFull]) {
+
         leagueMap[leagueFull] = [];
 
         if (![...leagueSelect.options].some(opt => opt.value === leagueFull)) {
+
           const opt = document.createElement("option");
           opt.value = leagueFull;
           opt.textContent = leagueFull;
           leagueSelect.appendChild(opt);
+
         }
+
       }
 
       let existingMatch = leagueMap[leagueFull]
@@ -110,6 +131,7 @@ async function parseMatches() {
       if (!existingMatch) {
 
         existingMatch = {
+
           matchKey,
           homeTeam,
           awayTeam,
@@ -119,30 +141,36 @@ async function parseMatches() {
           status: statusText,
           score: scoreText,
           channels: []
+
         };
 
         leagueMap[leagueFull].push(existingMatch);
+
       }
 
-      // 🔥 ป้องกัน channel ซ้ำระดับ match
+      const seenChannels = new Set();
+
       streams.forEach(stream => {
 
         const channel = stream.getAttribute("alt");
-        if (!channel) return;
+        if (!channel || seenChannels.has(channel)) return;
+
+        seenChannels.add(channel);
 
         let url = stream.getAttribute("data-url");
         const logo = stream.getAttribute("src");
+
         if (!url) return;
 
-        url = url.replace(":443", "")
-                 .replace("/dooballfree-com/", "/do-ball.com/");
-
-        if (existingMatch.channels.some(c => c.channel === channel)) return;
+        url = url.replace(":443","")
+                 .replace("/dooballfree-com/","/do-ball.com/");
 
         existingMatch.channels.push({
+
           channel,
           logo,
           url
+
         });
 
       });
@@ -152,17 +180,22 @@ async function parseMatches() {
     const savedLeague = getSavedLeague();
 
     if (savedLeague && leagueMap[savedLeague]) {
+
       document.getElementById("leagueSelect").value = savedLeague;
       renderFilteredLeague();
+
     } else {
+
       document.getElementById("leagueSelect").value = "all";
       renderAllLeagues();
+
     }
 
-  } catch (err) {
+  }
+  catch(err){
 
     document.querySelector("#matchesTable tbody").innerHTML =
-      `<tr><td colspan="6">ไม่สามารถโหลดข้อมูลการแข่งขัน</td></tr>`;
+      `<tr><td colspan="6">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
 
   }
 
@@ -453,5 +486,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await parseMatches();
   startAutoRefresh();
+
 
 });
