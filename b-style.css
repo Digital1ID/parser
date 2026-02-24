@@ -226,14 +226,6 @@ td img.logo {
   width: 56px;
   height: 56px;
   object-fit: contain;
-}
-
-
-
-.logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
   border-radius: 50%;
   background: #fff;
   padding: 3px;
@@ -364,4 +356,5 @@ tbody tr {
     margin-bottom: 4px;
   }
 }
+
 
