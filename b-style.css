@@ -1,0 +1,336 @@
+/* ============================= */
+/* GLOBAL */
+/* ============================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #141414;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* ============================= */
+/* HEADER */
+/* ============================= */
+
+header {
+  background: rgba(20,20,20,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+}
+
+header h1 {
+  color: #E50914;
+}
+
+/* ============================= */
+/* PLAYER */
+/* ============================= */
+
+.player {
+  margin: 20px auto;
+  text-align: center;
+  background: #1c1c1c;
+  padding: 20px;
+  border-radius: 12px;
+  width: 92%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  visibility: hidden;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.4s ease, max-height 0.4s ease;
+}
+
+.player.active {
+  visibility: visible;
+  opacity: 1;
+  max-height: 1200px;
+}
+
+.player h2 {
+  color: #E50914;
+  margin-bottom: 12px;
+}
+
+video {
+  width: 100%;
+  max-width: 900px;
+  border-radius: 10px;
+  border: 2px solid #E50914;
+}
+
+/* ============================= */
+/* CONTROLS */
+/* ============================= */
+
+.controls {
+  width: 95%;
+  margin: 15px auto;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+select,
+.search-box input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #222;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+select:focus,
+.search-box input:focus {
+  outline: none;
+  border-color: #E50914;
+  box-shadow: 0 0 10px rgba(229,9,20,0.5);
+}
+
+.search-box input {
+  width: 220px;
+}
+
+.search-box input::placeholder {
+  color: #aaa;
+}
+
+/* ============================= */
+/* TABLE WRAPPER (Scroll Safe) */
+/* ============================= */
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ============================= */
+/* PREMIUM TABLE */
+/* ============================= */
+
+table {
+  width: 95%;
+  min-width: 600px;
+  margin: 30px auto;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: linear-gradient(180deg, #1c1c1c, #161616);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03),
+    0 15px 35px rgba(0,0,0,0.7);
+}
+
+@media (min-width: 1200px) {
+  table {
+    max-width: 1200px;
+  }
+}
+
+/* HEADER */
+thead tr {
+  background: linear-gradient(90deg, #E50914, #b20710);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+th {
+  padding: 16px 10px;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* BODY */
+td {
+  padding: 14px 8px;
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.2s ease;
+}
+
+/* Zebra */
+tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+
+/* Hover Desktop */
+@media (hover: hover) {
+  tbody tr:hover {
+    background: rgba(229,9,20,0.15);
+  }
+}
+
+/* Column Width Lock (6 columns) */
+th:nth-child(1), td:nth-child(1) { width: 22%; }  /* เหย้า */
+th:nth-child(2), td:nth-child(2) { width: 10%; }  /* สกอร์ */
+th:nth-child(3), td:nth-child(3) { width: 22%; }  /* เยือน */
+th:nth-child(4), td:nth-child(4) { width: 16%; }  /* วันที่ */
+th:nth-child(5), td:nth-child(5) { width: 10%; }  /* สถานะ */
+th:nth-child(6), td:nth-child(6) { width: 20%; }  /* ช่อง */
+
+/* ============================= */
+/* TEAM STYLE */
+/* ============================= */
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  padding: 3px;
+}
+
+/* ============================= */
+/* STATUS BADGE */
+/* ============================= */
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-live {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  box-shadow: 0 0 10px rgba(34,197,94,0.5);
+}
+
+.status-ft {
+  background: #6b7280;
+}
+
+.status-upcoming {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
+
+.channel-cell {
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.channel-cell:hover {
+  background: rgba(229,9,20,0.12);
+  color: #E50914;
+  transform: scale(1.02);
+}
+
+/* ============================= */
+/* ACTIVE MATCH */
+/* ============================= */
+
+.active-match {
+  position: relative;
+  font-weight: 600;
+  background: rgba(229, 9, 20, 0.08);
+  box-shadow:
+    inset 0 0 0 2px #E50914,
+    0 0 15px rgba(229,9,20,0.4);
+}
+
+/* ============================= */
+/* LEAGUE HEADER */
+/* ============================= */
+
+.league-header td {
+  background: linear-gradient(90deg, #E50914, #b20710);
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 16px;
+}
+
+/* ============================= */
+/* ANIMATION */
+/* ============================= */
+
+tbody tr {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================= */
+/* MOBILE */
+/* ============================= */
+
+@media (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  select,
+  .search-box input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  thead { display: none; }
+
+  tr {
+    margin-bottom: 15px;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px;
+    background: #1c1c1c;
+  }
+
+  td {
+    text-align: left;
+    border: none;
+    padding: 6px 10px;
+    position: relative;
+  }
+
+  td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #E50914;
+    display: block;
+    margin-bottom: 4px;
+  }
+}
