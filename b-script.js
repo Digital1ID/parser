@@ -425,3 +425,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   startAutoRefresh();
 
 });
+
+function toggleChannels(){
+  document.body.classList.toggle("hide-channels");
+}
