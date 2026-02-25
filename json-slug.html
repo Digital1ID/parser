@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>JSON Slug Generator</title>
+<style>
+body { font-family: Arial; background:#111; color:#fff; padding:20px; }
+button { padding:8px 15px; margin:10px 0; cursor:pointer; }
+textarea {
+  width:100%;
+  height:400px;
+  background:#000;
+  color:#0f0;
+  padding:10px;
+  border:1px solid #444;
+  font-family: monospace;
+}
+</style>
+</head>
+<body>
+
+<h2>JSON Slug Generator (Preview ก่อนโหลด)</h2>
+<button onclick="downloadJSON()">ดาวน์โหลดไฟล์ใหม่</button>
+
+<h3>Preview</h3>
+<textarea id="preview"></textarea>
+
+<script>
+let updatedData = [];
+
+function getURLParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+}
+
+function generateSlug(name) {
+
+    // ลบปี (2025)
+    name = name.replace(/\(\d{4}\)/g, "");
+
+    // ตัดหลังภาษาไทยตัวแรก
+    name = name.split(/[\u0E00-\u0E7F]/)[0];
+
+    // ลบอักขระพิเศษ
+    name = name.replace(/[^A-Za-z0-9\s]/g, "");
+
+    // lowercase
+    name = name.toLowerCase();
+
+    // space → -
+    name = name.trim().replace(/\s+/g, "-");
+
+    // ลบ - ซ้ำ
+    name = name.replace(/-+/g, "-");
+
+    return name;
+}
+
+async function loadJSON() {
+    const url = getURLParam("url");
+    if (!url) {
+        alert("ไม่พบ ?url=");
+        return;
+    }
+
+    try {
+        const response = await fetch(url);
+        const json = await response.json();
+
+        const usedSlugs = new Set();
+
+        updatedData = json.map(item => {
+
+            let slug = generateSlug(item.name);
+
+            // ป้องกัน slug ซ้ำ
+            let baseSlug = slug;
+            let counter = 2;
+            while (usedSlugs.has(slug)) {
+                slug = baseSlug + "-" + counter;
+                counter++;
+            }
+            usedSlugs.add(slug);
+
+            return {
+                player: item.player,
+                id: slug,
+                name: item.name,
+                category: item.category,
+                info: item.info,
+                video: item.video,
+                Referrer: item.Referrer
+            };
+        });
+
+        document.getElementById("preview").value =
+            JSON.stringify(updatedData, null, 2);
+
+    } catch (err) {
+        alert("โหลด JSON ไม่สำเร็จ");
+        console.error(err);
+    }
+}
+
+function downloadJSON() {
+    if (!updatedData.length) {
+        alert("ยังไม่มีข้อมูล");
+        return;
+    }
+
+    const blob = new Blob(
+        [JSON.stringify(updatedData, null, 2)],
+        { type: "application/json" }
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "new_slug.json";
+    a.click();
+}
+
+loadJSON();
+</script>
+
+</body>
+</html>
