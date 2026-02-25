@@ -69,29 +69,36 @@ async function loadJSON() {
 
         const usedSlugs = new Set();
 
-        updatedData = json.map(item => {
+updatedData = json.map(item => {
 
-            let slug = generateSlug(item.name);
+    let slug;
 
-            // ป้องกัน slug ซ้ำ
-            let baseSlug = slug;
-            let counter = 2;
-            while (usedSlugs.has(slug)) {
-                slug = baseSlug + "-" + counter;
-                counter++;
-            }
-            usedSlugs.add(slug);
+    if (item.id && item.id.trim() !== "") {
+        slug = item.id; // ใช้ id เดิม
+    } else {
+        slug = generateSlug(item.name);
+    }
 
-            return {
-                player: item.player,
-                id: slug,
-                name: item.name,
-                category: item.category,
-                info: item.info,
-                video: item.video,
-                Referrer: item.Referrer
-            };
-        });
+    // ป้องกัน slug ซ้ำ
+    let baseSlug = slug;
+    let counter = 2;
+    while (usedSlugs.has(slug)) {
+        slug = baseSlug + "-" + counter;
+        counter++;
+    }
+
+    usedSlugs.add(slug);
+
+    return {
+        player: item.player,
+        id: slug,
+        name: item.name,
+        category: item.category,
+        info: item.info,
+        video: item.video,
+        Referrer: item.Referrer
+    };
+});
 
         document.getElementById("preview").value =
             JSON.stringify(updatedData, null, 2);
