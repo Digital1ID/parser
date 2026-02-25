@@ -2,61 +2,99 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>JSON Slug Generator</title>
+<title>JSON Slug + Split Generator</title>
 <style>
-body { font-family: Arial; background:#111; color:#fff; padding:20px; }
-button { padding:8px 15px; margin:10px 0; cursor:pointer; }
+body {
+  font-family: Arial;
+  background:#111;
+  color:#fff;
+  padding:20px;
+}
+button {
+  padding:10px 18px;
+  margin:10px 0;
+  cursor:pointer;
+  background:#0f0;
+  border:none;
+  font-weight:bold;
+}
 textarea {
   width:100%;
-  height:400px;
+  height:450px;
   background:#000;
   color:#0f0;
-  padding:10px;
+  padding:15px;
   border:1px solid #444;
   font-family: monospace;
+  font-size:13px;
 }
 </style>
 </head>
 <body>
 
-<h2>JSON Slug Generator (Preview ก่อนโหลด)</h2>
+<h2>JSON Slug + Name Split Generator</h2>
+
 <button onclick="downloadJSON()">ดาวน์โหลดไฟล์ใหม่</button>
 
 <h3>Preview</h3>
 <textarea id="preview"></textarea>
 
 <script>
+
 let updatedData = [];
 
+// =============================
+// อ่านค่า ?url=
+// =============================
 function getURLParam(name) {
     const params = new URLSearchParams(window.location.search);
     return params.get(name);
 }
 
-function generateSlug(name) {
+// =============================
+// แยก NameEN / NameTH
+// =============================
+function splitName(name) {
+
+    if (!name) return { NameEN:"", NameTH:"" };
 
     // ลบปี (2025)
-    name = name.replace(/\(\d{4}\)/g, "");
+    name = name.replace(/\(\d{4}\)/g, "").trim();
 
-    // ตัดหลังภาษาไทยตัวแรก
-    name = name.split(/[\u0E00-\u0E7F]/)[0];
+    const thaiMatch = name.match(/[\u0E00-\u0E7F]/);
 
-    // ลบอักขระพิเศษ
-    name = name.replace(/[^A-Za-z0-9\s]/g, "");
+    let NameEN = "";
+    let NameTH = "";
 
-    // lowercase
-    name = name.toLowerCase();
+    if (thaiMatch) {
+        const index = thaiMatch.index;
+        NameEN = name.substring(0, index).trim();
+        NameTH = name.substring(index).trim();
+    } else {
+        NameEN = name.trim();
+        NameTH = "";
+    }
 
-    // space → -
-    name = name.trim().replace(/\s+/g, "-");
-
-    // ลบ - ซ้ำ
-    name = name.replace(/-+/g, "-");
-
-    return name;
+    return { NameEN, NameTH };
 }
 
+// =============================
+// สร้าง slug จาก NameEN
+// =============================
+function generateSlug(text) {
+    return text
+        .replace(/[^A-Za-z0-9\s]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+}
+
+// =============================
+// โหลด JSON จาก URL
+// =============================
 async function loadJSON() {
+
     const url = getURLParam("url");
     if (!url) {
         alert("ไม่พบ ?url=");
@@ -69,36 +107,35 @@ async function loadJSON() {
 
         const usedSlugs = new Set();
 
-updatedData = json.map(item => {
+        updatedData = json.map(item => {
 
-    let slug;
+            const { NameEN, NameTH } = splitName(item.name);
 
-    if (item.id && item.id.trim() !== "") {
-        slug = item.id; // ใช้ id เดิม
-    } else {
-        slug = generateSlug(item.name);
-    }
+            // ถ้ามี id อยู่แล้ว ใช้ของเดิม
+            let finalId = (item.id && item.id.trim() !== "")
+                ? item.id.trim()
+                : generateSlug(NameEN);
 
-    // ป้องกัน slug ซ้ำ
-    let baseSlug = slug;
-    let counter = 2;
-    while (usedSlugs.has(slug)) {
-        slug = baseSlug + "-" + counter;
-        counter++;
-    }
+            // ป้องกัน id ซ้ำ
+            let baseId = finalId;
+            let counter = 2;
+            while (usedSlugs.has(finalId)) {
+                finalId = baseId + "-" + counter;
+                counter++;
+            }
+            usedSlugs.add(finalId);
 
-    usedSlugs.add(slug);
-
-    return {
-        player: item.player,
-        id: slug,
-        name: item.name,
-        category: item.category,
-        info: item.info,
-        video: item.video,
-        Referrer: item.Referrer
-    };
-});
+            return {
+                player: item.player,
+                id: finalId,
+                NameEN: NameEN,
+                NameTH: NameTH,
+                category: item.category,
+                info: item.info,
+                video: item.video,
+                Referrer: item.Referrer
+            };
+        });
 
         document.getElementById("preview").value =
             JSON.stringify(updatedData, null, 2);
@@ -109,7 +146,11 @@ updatedData = json.map(item => {
     }
 }
 
+// =============================
+// ดาวน์โหลดไฟล์ใหม่
+// =============================
 function downloadJSON() {
+
     if (!updatedData.length) {
         alert("ยังไม่มีข้อมูล");
         return;
@@ -120,13 +161,18 @@ function downloadJSON() {
         { type: "application/json" }
     );
 
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "new_slug.json";
+    a.href = url;
+    a.download = "new_updated.json";
     a.click();
+
+    URL.revokeObjectURL(url);
 }
 
+// เริ่มโหลดทันที
 loadJSON();
+
 </script>
 
 </body>
