@@ -76,7 +76,7 @@ function extractSeasonNumber(title) {
 function generateM3U(seriesData) {
   let m3u = "#EXTM3U\n";
   const logo = seriesData.poster || "";
-  const title = seriesData.title || "ซีรี่ย์ การ์ตูน";
+  const title = seriesData.title || "";
   const season = seriesData.season || 1;
   for (const ep of seriesData.episodes) {
     if (ep.video) {
