@@ -99,29 +99,30 @@ updatedData = json.map(item => {
 
     if (typeof item.info === "object" && item.info !== null) {
 
-        // clone เพื่อไม่แก้ต้นฉบับตรง ๆ
         finalInfo = { ...item.info };
 
-        // เติม poster เฉพาะกรณีไม่มี
         if (!finalInfo.poster && item.poster) {
             finalInfo.poster = item.poster;
         }
 
     } else {
 
-        // info เป็น string หรือไม่มี
         finalInfo = {
-            poster: item.poster || "",
-            sound: item.info || ""
+            sound: item.info || "",
+            poster: item.poster || ""
         };
     }
 
     return {
-        ...item,          // เก็บ field เดิมทั้งหมด
         id: finalId,
         nameEN,
         nameTH,
-        info: finalInfo
+        name: item.name,
+        category: item.category || "",
+        player: item.player || "",
+        info: finalInfo,
+        video: item.video || "",
+        Referrer: item.Referrer || ""
     };
 });
 
