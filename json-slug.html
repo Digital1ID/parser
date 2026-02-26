@@ -114,12 +114,12 @@ updatedData = json.map(item => {
     }
 
     return {
+        player: item.player || "",
         id: finalId,
         nameEN,
         nameTH,
         name: item.name,
         category: item.category || "",
-        player: item.player || "",
         info: finalInfo,
         video: item.video || "",
         Referrer: item.Referrer || ""
