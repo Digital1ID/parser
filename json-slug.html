@@ -121,6 +121,10 @@ if (typeof item.info === "object" && item.info !== null) {
     };
 }
 
+// ===== ดึง sound ออกมาก่อน =====
+const soundValue = finalInfo.sound || "";
+delete finalInfo.sound;
+
 // ===== เพิ่ม year ถ้ายังไม่มี =====
 if (!finalInfo.year && extractedYear) {
     finalInfo.year = extractedYear;
