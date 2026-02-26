@@ -90,8 +90,10 @@ function generateM3U(seriesData) {
 
 function generateJHAT (seriesData, statusText) {
   return [{
-    id: seriesData.id || "",
     player: "p2p/playlist",
+    id: seriesData.id || "",
+    nameEN: "",
+    nameTH: "",
     name: statusText ? `${seriesData.title} (${statusText})` : seriesData.title || "",
     category: "ซีรี่ย์ การ์ตูน",
     info: {
