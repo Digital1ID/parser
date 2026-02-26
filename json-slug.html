@@ -62,6 +62,12 @@ function generateSlug(text) {
 }
 
 // =============================
+function extractYear(name) {
+    const match = name.match(/\((\d{4})\)/);
+    return match ? parseInt(match[1]) : null;
+}
+
+// =============================
 async function loadJSON() {
 
     const url = getURLParam("url");
@@ -94,24 +100,39 @@ updatedData = json.map(item => {
 
     usedIds.add(finalId);
 
-    // ===== SAFE INFO HANDLING =====
-    let finalInfo;
+// ===== SAFE INFO + YEAR =====
+let finalInfo;
+const extractedYear = extractYear(item.name);
 
-    if (typeof item.info === "object" && item.info !== null) {
+if (typeof item.info === "object" && item.info !== null) {
 
-        finalInfo = { ...item.info };
+    finalInfo = { ...item.info };
 
-        if (!finalInfo.poster && item.poster) {
-            finalInfo.poster = item.poster;
-        }
-
-    } else {
-
-        finalInfo = {
-            poster: item.poster || "",
-            sound: item.info || ""
-        };
+    // เติม poster ถ้ายังไม่มี
+    if (!finalInfo.poster && item.poster) {
+        finalInfo.poster = item.poster;
     }
+
+} else {
+
+    finalInfo = {
+        poster: item.poster || "",
+        sound: item.info || ""
+    };
+}
+
+// ===== เพิ่ม year ถ้ายังไม่มี =====
+if (!finalInfo.year && extractedYear) {
+    finalInfo.year = extractedYear;
+}
+
+// ===== เพิ่ม plot ถ้ายังไม่มี =====
+if (!("plot" in finalInfo)) {
+    finalInfo.plot = "";
+}
+
+// ===== ใส่ sound กลับท้ายสุด =====
+finalInfo.sound = soundValue;
 
     return {
         player: item.player || "",
