@@ -23,21 +23,16 @@ textarea { width:100%; height:450px; background:#000; color:#0f0; padding:15px; 
 let updatedData = [];
 
 // =============================
-// อ่าน ?url=
-// =============================
 function getURLParam(name) {
     const params = new URLSearchParams(window.location.search);
     return params.get(name);
 }
 
 // =============================
-// แยก nameEN / nameTH
-// =============================
 function splitName(name) {
 
     if (!name) return { nameEN:"", nameTH:"" };
 
-    // ลบปี (2025)
     name = name.replace(/\(\d{4}\)/g, "").trim();
 
     const thaiMatch = name.match(/[\u0E00-\u0E7F]/);
@@ -51,56 +46,11 @@ function splitName(name) {
         nameTH = name.substring(index).trim();
     } else {
         nameEN = name.trim();
-        nameTH = "";
     }
 
     return { nameEN, nameTH };
 }
 
-function generateSlug(text) {
-    return text
-        .replace(/[^A-Za-z0-9\s]/g, "")
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
-}
-
-const usedIds = new Set();
-
-updatedData = json.map(item => {
-
-    const { nameEN, nameTH } = splitName(item.name);
-
-    let finalId = item.id && item.id.trim() !== ""
-        ? item.id.trim()
-        : generateSlug(nameEN);
-
-    // ป้องกัน id ซ้ำ
-    let baseId = finalId;
-    let counter = 2;
-    while (usedIds.has(finalId)) {
-        finalId = baseId + "-" + counter;
-        counter++;
-    }
-    usedIds.add(finalId);
-
-    return {
-        id: finalId,
-        nameEN: nameEN,
-        nameTH: nameTH,
-        name: item.name,
-        info: {
-            sound: typeof item.info === "string" ? item.info : (item.info?.sound || ""),
-            poster: item.poster || item.info?.poster || ""
-        },
-        video: item.video
-    };
-
-});
-
-// =============================
-// สร้าง slug
 // =============================
 function generateSlug(text) {
     return text
@@ -111,8 +61,6 @@ function generateSlug(text) {
         .replace(/-+/g, "-");
 }
 
-// =============================
-// โหลด JSON
 // =============================
 async function loadJSON() {
 
@@ -131,7 +79,7 @@ async function loadJSON() {
 
         updatedData = json.map(item => {
 
-            const { nameEN, nameTH } = splitname(item.name);
+            const { nameEN, nameTH } = splitName(item.name);
 
             let finalId = (item.id && item.id.trim() !== "")
                 ? item.id.trim()
@@ -148,15 +96,17 @@ async function loadJSON() {
             usedIds.add(finalId);
 
             return {
-                player: item.player,
                 id: finalId,
-                nameEN: nameEN,
-                nameTH: nameTH,
-                name: item.name, // เก็บ name เดิม
-                category: item.category,
-                info: item.info,
-                video: item.video,
-                Referrer: item.Referrer
+                nameEN,
+                nameTH,
+                name: item.name,
+                info: {
+                    sound: typeof item.info === "string"
+                        ? item.info
+                        : (item.info?.sound || ""),
+                    poster: item.poster || item.info?.poster || ""
+                },
+                video: item.video
             };
         });
 
@@ -169,8 +119,6 @@ async function loadJSON() {
     }
 }
 
-// =============================
-// ดาวน์โหลด
 // =============================
 function downloadJSON() {
 
