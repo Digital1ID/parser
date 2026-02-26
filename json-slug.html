@@ -33,10 +33,11 @@ function getURLParam(name) {
 // =============================
 // แยก nameEN / nameTH
 // =============================
-function splitname(name) {
+function splitName(name) {
 
     if (!name) return { nameEN:"", nameTH:"" };
 
+    // ลบปี (2025)
     name = name.replace(/\(\d{4}\)/g, "").trim();
 
     const thaiMatch = name.match(/[\u0E00-\u0E7F]/);
@@ -55,6 +56,48 @@ function splitname(name) {
 
     return { nameEN, nameTH };
 }
+
+function generateSlug(text) {
+    return text
+        .replace(/[^A-Za-z0-9\s]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+}
+
+const usedIds = new Set();
+
+updatedData = json.map(item => {
+
+    const { nameEN, nameTH } = splitName(item.name);
+
+    let finalId = item.id && item.id.trim() !== ""
+        ? item.id.trim()
+        : generateSlug(nameEN);
+
+    // ป้องกัน id ซ้ำ
+    let baseId = finalId;
+    let counter = 2;
+    while (usedIds.has(finalId)) {
+        finalId = baseId + "-" + counter;
+        counter++;
+    }
+    usedIds.add(finalId);
+
+    return {
+        id: finalId,
+        nameEN: nameEN,
+        nameTH: nameTH,
+        name: item.name,
+        info: {
+            sound: typeof item.info === "string" ? item.info : (item.info?.sound || ""),
+            poster: item.poster || item.info?.poster || ""
+        },
+        video: item.video
+    };
+
+});
 
 // =============================
 // สร้าง slug
