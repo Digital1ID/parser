@@ -77,47 +77,53 @@ async function loadJSON() {
 
         const usedIds = new Set();
 
-        updatedData = json.map(item => {
+updatedData = json.map(item => {
 
-            const { nameEN, nameTH } = splitName(item.name);
+    const { nameEN, nameTH } = splitName(item.name);
 
-            let finalId = (item.id && item.id.trim() !== "")
-                ? item.id.trim()
-                : generateSlug(nameEN);
+    let finalId = (item.id && item.id.trim() !== "")
+        ? item.id.trim()
+        : generateSlug(nameEN);
 
-            let baseId = finalId;
-            let counter = 2;
+    let baseId = finalId;
+    let counter = 2;
 
-            while (usedIds.has(finalId)) {
-                finalId = baseId + "-" + counter;
-                counter++;
-            }
-
-            usedIds.add(finalId);
-
-            return {
-                id: finalId,
-                nameEN,
-                nameTH,
-                name: item.name,
-                info: {
-                    sound: typeof item.info === "string"
-                        ? item.info
-                        : (item.info?.sound || ""),
-                    poster: item.poster || item.info?.poster || ""
-                },
-                video: item.video
-            };
-        });
-
-        document.getElementById("preview").value =
-            JSON.stringify(updatedData, null, 2);
-
-    } catch (err) {
-        alert("โหลด JSON ไม่สำเร็จ");
-        console.error(err);
+    while (usedIds.has(finalId)) {
+        finalId = baseId + "-" + counter++;
     }
-}
+
+    usedIds.add(finalId);
+
+    // ===== SAFE INFO HANDLING =====
+    let finalInfo;
+
+    if (typeof item.info === "object" && item.info !== null) {
+
+        // clone เพื่อไม่แก้ต้นฉบับตรง ๆ
+        finalInfo = { ...item.info };
+
+        // เติม poster เฉพาะกรณีไม่มี
+        if (!finalInfo.poster && item.poster) {
+            finalInfo.poster = item.poster;
+        }
+
+    } else {
+
+        // info เป็น string หรือไม่มี
+        finalInfo = {
+            sound: item.info || "",
+            poster: item.poster || ""
+        };
+    }
+
+    return {
+        ...item,          // เก็บ field เดิมทั้งหมด
+        id: finalId,
+        nameEN,
+        nameTH,
+        info: finalInfo
+    };
+});
 
 // =============================
 function downloadJSON() {
