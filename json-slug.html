@@ -125,6 +125,15 @@ updatedData = json.map(item => {
     };
 });
 
+        document.getElementById("preview").value =
+            JSON.stringify(updatedData, null, 2);
+
+    } catch (err) {
+        alert("โหลด JSON ไม่สำเร็จ");
+        console.error(err);
+    }
+}
+
 // =============================
 function downloadJSON() {
 
