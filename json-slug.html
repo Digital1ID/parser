@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>JSON Slug + Name Split Tool</title>
+<title>JSON Slug + name Split Tool</title>
 <style>
 body { font-family: Arial; background:#111; color:#fff; padding:20px; }
 button { padding:10px 18px; margin:10px 0; cursor:pointer; background:#0f0; border:none; font-weight:bold; }
@@ -11,7 +11,7 @@ textarea { width:100%; height:450px; background:#000; color:#0f0; padding:15px; 
 </head>
 <body>
 
-<h2>JSON Slug + Name Split Generator</h2>
+<h2>JSON Slug + name Split Generator</h2>
 
 <button onclick="downloadJSON()">ดาวน์โหลดไฟล์ใหม่</button>
 
@@ -31,29 +31,29 @@ function getURLParam(name) {
 }
 
 // =============================
-// แยก NameEN / NameTH
+// แยก nameEN / nameTH
 // =============================
-function splitName(name) {
+function splitname(name) {
 
-    if (!name) return { NameEN:"", NameTH:"" };
+    if (!name) return { nameEN:"", nameTH:"" };
 
     name = name.replace(/\(\d{4}\)/g, "").trim();
 
     const thaiMatch = name.match(/[\u0E00-\u0E7F]/);
 
-    let NameEN = "";
-    let NameTH = "";
+    let nameEN = "";
+    let nameTH = "";
 
     if (thaiMatch) {
         const index = thaiMatch.index;
-        NameEN = name.substring(0, index).trim();
-        NameTH = name.substring(index).trim();
+        nameEN = name.substring(0, index).trim();
+        nameTH = name.substring(index).trim();
     } else {
-        NameEN = name.trim();
-        NameTH = "";
+        nameEN = name.trim();
+        nameTH = "";
     }
 
-    return { NameEN, NameTH };
+    return { nameEN, nameTH };
 }
 
 // =============================
@@ -88,11 +88,11 @@ async function loadJSON() {
 
         updatedData = json.map(item => {
 
-            const { NameEN, NameTH } = splitName(item.name);
+            const { nameEN, nameTH } = splitname(item.name);
 
             let finalId = (item.id && item.id.trim() !== "")
                 ? item.id.trim()
-                : generateSlug(NameEN);
+                : generateSlug(nameEN);
 
             let baseId = finalId;
             let counter = 2;
@@ -107,8 +107,8 @@ async function loadJSON() {
             return {
                 player: item.player,
                 id: finalId,
-                NameEN: NameEN,
-                NameTH: NameTH,
+                nameEN: nameEN,
+                nameTH: nameTH,
                 name: item.name, // เก็บ name เดิม
                 category: item.category,
                 info: item.info,
