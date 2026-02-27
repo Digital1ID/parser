@@ -573,29 +573,52 @@ window.onload = async () => {
         seasonSelect.appendChild(opt);
       });
 
-      async function loadEpisodes(seasonNo, episodeNo=null){
-        episodeSelect.innerHTML="";
-        seasonMap[seasonNo].forEach(ep=>{
-          const opt=document.createElement("option");
-          opt.value=`?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
-          //opt.text=`Episode ${ep.episodeNo} - ${ep.titleTh||ep.titleEn}`;
-          opt.text=`${ep.titleTh||ep.titleEn||ep.episodeNo}`;
-          episodeSelect.appendChild(opt);
-          subtitleOverlay.style.display="none";
-          subtitleOverlay.style.opacity="0";
-        });
+async function loadEpisodes(seasonNo, episodeNo = null){
 
-        let targetEp = episodeNo ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo) : seasonMap[seasonNo][0];
-        if(targetEp){
-          const epData = await processEpisode(targetEp);
-          initPlayer(epData.video);
-          renderSubtitleMenu(epData.subtitle);
-          document.getElementById("videoTitle").innerText = show.titleTh||show.titleEn;
-          document.title = `กำลังดู ${show.titleTh||show.titleEn} - ซีซั่น ${seasonNo} - ${epData.title}`;
-          seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
-          episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
-        }
-      }
+  // 🔹 เคลียร์ episode dropdown
+  episodeSelect.innerHTML = "";
+
+  seasonMap[seasonNo].forEach(ep=>{
+    const opt = document.createElement("option");
+    opt.value = `?type=series&ids=${showId}/${seasonNo}/${ep.episodeNo}`;
+    opt.text = `${ep.titleTh || ep.titleEn || ep.episodeNo}`;
+    episodeSelect.appendChild(opt);
+  });
+
+  // 🔹 ซ่อน overlay ก่อนโหลดใหม่ (ย้ายออกจาก loop)
+  subtitleOverlay.style.display = "none";
+  subtitleOverlay.style.opacity = "0";
+
+  // 🔹 หา episode เป้าหมาย
+  let targetEp = episodeNo
+    ? seasonMap[seasonNo].find(e => e.episodeNo == episodeNo)
+    : seasonMap[seasonNo][0];
+
+  if(!targetEp) return;
+
+  // 🔹 โหลดข้อมูล episode
+  const epData = await processEpisode(targetEp);
+
+  // 🔹 เคลียร์ subtitle เดิม
+  clearSubtitles();
+
+  // 🔹 โหลด player ใหม่
+  initPlayer(epData.video);
+
+  // 🔹 โหลด subtitle ใหม่
+  renderSubtitleMenu(epData.subtitle);
+
+  // 🔹 อัปเดตชื่อเรื่อง
+  document.getElementById("videoTitle").innerText =
+    `${show.titleTh || show.titleEn} - ${epData.title}`;
+
+  document.title =
+    `กำลังดู ${show.titleTh || show.titleEn} - ซีซั่น ${seasonNo} - ${epData.title}`;
+
+  // 🔹 ตั้งค่า dropdown ให้ตรง
+  seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
+  episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
+}
 
       seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
       episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
