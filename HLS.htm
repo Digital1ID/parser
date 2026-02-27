@@ -357,27 +357,37 @@ function renderSubtitleMenu(subtitles){
 }
 
 // --- Responsive Overlay ---
+let bdnTimeUpdateHandler=null;
+
 function activateBDNOverlay(folder,videoId,cdn,lang){
+
   const track=Array.from(video.textTracks).find(
     t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
   );
   if(!track) return;
+
   track.mode="hidden";
 
-  video.addEventListener("timeupdate",()=>{
+  if(bdnTimeUpdateHandler){
+    video.removeEventListener("timeupdate", bdnTimeUpdateHandler);
+  }
+
+  bdnTimeUpdateHandler = ()=>{
     const cue=Array.from(track.activeCues||[])[0];
-    if(cue&&cue.text.trim()){
+
+    if(cue && cue.text.trim()){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
-      cue.onexit = ()=>{ subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; };
     } else {
       subtitleOverlay.style.opacity="0";
       subtitleOverlay.style.display="none";
     }
-  });
+  };
+
+  video.addEventListener("timeupdate", bdnTimeUpdateHandler);
 }
 
 function loadAudioTracks(hls){
