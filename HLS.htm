@@ -380,8 +380,8 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
     if(cue&&cue.text.trim()){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
-      subtitleOverlay.style.width = "100vw";
-      subtitleOverlay.style.height = "1080px";
+      subtitleOverlay.style.width = "1920";
+      subtitleOverlay.style.height = "1080";
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
