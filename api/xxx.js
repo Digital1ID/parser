@@ -3,30 +3,30 @@ export default async function handler(req, res) {
     const { id, id_league, ch } = req.query;
 
     if (!id || !id_league) {
-      return res.json({
-        status: false,
-        error: "Missing id or id_league"
-      });
+      return res.json({ status: false, error: "Missing id or id_league" });
     }
 
-    const pageUrl = `https://full24th.com/dooball/?id=${id}&id_league=${id_league}&ch=${ch || 0}`;
-
     // =========================
-    // STEP 1: โหลดหน้าเพื่อดึง nonce
+    // STEP 1: ดึงหน้าแรกเพื่อเอา nonce
     // =========================
-    const pageRes = await fetch(pageUrl, {
+    const homeRes = await fetch("https://full24th.com/", {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Referer": "https://full24th.com/"
+        "Accept":
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
       }
     });
 
-    const pageHtml = await pageRes.text();
+    const homeHtml = await homeRes.text();
 
-    const nonceMatch = pageHtml.match(/"match_nonce":"(.*?)"/);
+    const nonceMatch = homeHtml.match(/"match_nonce":"(.*?)"/);
 
     if (!nonceMatch) {
-      return res.json({ status: false, error: "Nonce not found" });
+      return res.json({
+        status: false,
+        error: "Nonce not found in homepage",
+        debug: homeHtml.substring(0, 500)
+      });
     }
 
     const nonce = nonceMatch[1];
@@ -41,15 +41,12 @@ export default async function handler(req, res) {
     const ajaxRes = await fetch(ajaxUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Referer": pageUrl
+        "Referer": "https://full24th.com/"
       }
     });
 
     const ajaxHtml = await ajaxRes.text();
 
-    // =========================
-    // STEP 3: หา m3u8
-    // =========================
     const m3u8Match = ajaxHtml.match(/https?:\/\/[^"]+\.m3u8[^"]*/);
 
     if (!m3u8Match) {
@@ -60,17 +57,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const streamUrl = m3u8Match[0];
-
     return res.json({
       status: true,
-      stream: `/api/pro?url=${encodeURIComponent(streamUrl)}`
+      stream: m3u8Match[0]
     });
 
   } catch (err) {
-    return res.json({
-      status: false,
-      error: err.message
-    });
+    return res.json({ status: false, error: err.message });
   }
 }
