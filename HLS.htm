@@ -357,37 +357,27 @@ function renderSubtitleMenu(subtitles){
 }
 
 // --- Responsive Overlay ---
-let bdnTimeUpdateHandler=null;
-
 function activateBDNOverlay(folder,videoId,cdn,lang){
-
   const track=Array.from(video.textTracks).find(
     t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
   );
   if(!track) return;
-
   track.mode="hidden";
 
-  if(bdnTimeUpdateHandler){
-    video.removeEventListener("timeupdate", bdnTimeUpdateHandler);
-  }
-
-  bdnTimeUpdateHandler = ()=>{
+  video.addEventListener("timeupdate",()=>{
     const cue=Array.from(track.activeCues||[])[0];
-
-    if(cue && cue.text.trim()){
+    if(cue&&cue.text.trim()){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
+      cue.onexit = ()=>{ subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; };
     } else {
       subtitleOverlay.style.opacity="0";
       subtitleOverlay.style.display="none";
     }
-  };
-
-  video.addEventListener("timeupdate", bdnTimeUpdateHandler);
+  });
 }
 
 function loadAudioTracks(hls){
@@ -523,20 +513,8 @@ async function loadSeriesEpisode(showId, seasonNo, episodeNo){
 <script>
 function initPlayer(videoURL){
   const video=document.getElementById("video");
-
-  // 🔥 ถ้ามี hls เก่าอยู่ ให้ destroy ก่อน
-  if(window.hls){
-    window.hls.destroy();
-    window.hls=null;
-  }
-
   if(Hls.isSupported()){
-    window.hls=new Hls({
-      enableWorker:true,
-      lowLatencyMode:true,
-      backBufferLength:90
-    });
-
+    window.hls=new Hls();
     hls.attachMedia(video);
     hls.loadSource(videoURL);
 
@@ -544,7 +522,6 @@ function initPlayer(videoURL){
       loadAudioTracks(hls);
       loadQualityLevels(hls);
     });
-
   } else if(video.canPlayType("application/vnd.apple.mpegurl")){
     video.src=videoURL;
   }
@@ -643,20 +620,8 @@ async function loadEpisodes(seasonNo, episodeNo = null){
   episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
 }
 
-seasonSelect.addEventListener("change", ()=>{
-  const parts = seasonSelect.value.split("/");
-  const newSeason = parseInt(parts[2]);
-  loadEpisodes(newSeason, 1);
-  history.pushState({}, "", seasonSelect.value);
-});
-
-episodeSelect.addEventListener("change", ()=>{
-  const parts = episodeSelect.value.split("/");
-  const newSeason = parseInt(parts[2]);
-  const newEp = parseInt(parts[3]);
-  loadEpisodes(newSeason, newEp);
-  history.pushState({}, "", episodeSelect.value);
-});
+      seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
+      episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
 
       await loadEpisodes(seasonNo, episodeNo);
     } else {
