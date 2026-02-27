@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     return res.json({
       status: true,
       matchId,
-      stream: `/api/proxy?url=${encodeURIComponent(streamUrl)}`
+      stream: `/api/pro?url=${encodeURIComponent(streamUrl)}`
     });
 
   } catch (err) {
