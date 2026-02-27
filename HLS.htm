@@ -595,8 +595,20 @@ window.onload = async () => {
         }
       }
 
-      seasonSelect.addEventListener("change", ()=>{ window.location.href = seasonSelect.value; });
-      episodeSelect.addEventListener("change", ()=>{ window.location.href = episodeSelect.value; });
+seasonSelect.addEventListener("change", ()=>{
+  const parts = seasonSelect.value.split("/");
+  const newSeason = parseInt(parts[2]);
+  loadEpisodes(newSeason, 1);
+  history.pushState({}, "", seasonSelect.value);
+});
+
+episodeSelect.addEventListener("change", ()=>{
+  const parts = episodeSelect.value.split("/");
+  const newSeason = parseInt(parts[2]);
+  const newEp = parseInt(parts[3]);
+  loadEpisodes(newSeason, newEp);
+  history.pushState({}, "", episodeSelect.value);
+});
 
       await loadEpisodes(seasonNo, episodeNo);
     } else {
