@@ -39,17 +39,20 @@
 video{width:100%;height:auto;object-fit:contain;background:#000}
 }
 
+#playerContainer{
+  position:relative;
+}
+
 #subtitleOverlay{
   position:absolute;
-  bottom:8%;
   left:50%;
   transform:translateX(-50%);
-  max-width:80%;
-  max-height:20%;
-  object-fit:contain;
+  bottom:8%;
   pointer-events:none;
-  transition:opacity .2s ease;
+  object-fit:contain;
   display:none;
+  opacity:0;
+  transition:opacity .15s ease;
 }
 
 #controls {
