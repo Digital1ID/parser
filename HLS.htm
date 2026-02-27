@@ -513,8 +513,20 @@ async function loadSeriesEpisode(showId, seasonNo, episodeNo){
 <script>
 function initPlayer(videoURL){
   const video=document.getElementById("video");
+
+  // 🔥 ถ้ามี hls เก่าอยู่ ให้ destroy ก่อน
+  if(window.hls){
+    window.hls.destroy();
+    window.hls=null;
+  }
+
   if(Hls.isSupported()){
-    window.hls=new Hls();
+    window.hls=new Hls({
+      enableWorker:true,
+      lowLatencyMode:true,
+      backBufferLength:90
+    });
+
     hls.attachMedia(video);
     hls.loadSource(videoURL);
 
@@ -522,6 +534,7 @@ function initPlayer(videoURL){
       loadAudioTracks(hls);
       loadQualityLevels(hls);
     });
+
   } else if(video.canPlayType("application/vnd.apple.mpegurl")){
     video.src=videoURL;
   }
