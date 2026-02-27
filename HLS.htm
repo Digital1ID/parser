@@ -382,7 +382,7 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.style.width = "auto";
-      subtitleOverlay.style.height = "1080px";
+      subtitleOverlay.style.height = "auto";
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
