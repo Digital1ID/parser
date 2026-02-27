@@ -362,7 +362,7 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
     t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
   );
   if(!track) return;
-  track.mode="hidden";
+  track.mode="none";
 
   video.addEventListener("timeupdate",()=>{
     const cue=Array.from(track.activeCues||[])[0];
