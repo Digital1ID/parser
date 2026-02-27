@@ -368,44 +368,29 @@ function renderSubtitleMenu(subtitles){
 }
 
 // --- Responsive Overlay ---
-let activeBDNHandler = null;
-
 function activateBDNOverlay(folder,videoId,cdn,lang){
-
-  const track = Array.from(video.textTracks)
-    .find(t => t.srclang === lang && t.dataset?.bdn==="true");
-
+  const track=Array.from(video.textTracks).find(
+    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+  );
   if(!track) return;
-
   track.mode="hidden";
 
-  if(activeBDNHandler){
-    video.removeEventListener("timeupdate",activeBDNHandler);
-  }
-
-  activeBDNHandler = ()=>{
-
-    const cue = Array.from(track.activeCues||[])[0];
-
-    if(cue && cue.text.trim()){
-
-      const imgName = cue.text.trim();
-      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
-
-      if(subtitleOverlay.src !== imgURL){
-        subtitleOverlay.src = imgURL;
-      }
-
+  video.addEventListener("timeupdate",()=>{
+    const cue=Array.from(track.activeCues||[])[0];
+    if(cue&&cue.text.trim()){
+      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.style.width = "auto";
+      subtitleOverlay.style.height = "auto";
+      subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
-
-    }else{
+      cue.onexit = ()=>{ subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; };
+    } else {
       subtitleOverlay.style.opacity="0";
       subtitleOverlay.style.display="none";
     }
-  };
-
-  video.addEventListener("timeupdate",activeBDNHandler);
+  });
 }
 
 function loadAudioTracks(hls){
