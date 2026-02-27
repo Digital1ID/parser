@@ -50,7 +50,7 @@ video{width:100%;height:auto;object-fit:contain;background:#000}
   bottom:8%;
 
   width:60%;
-  height:auto;
+  height:18%;
 
   object-fit:contain;
 
@@ -381,7 +381,7 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.style.width = "100vw";
-      subtitleOverlay.style.height = "100vh";
+      subtitleOverlay.style.height = "1080px";
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
