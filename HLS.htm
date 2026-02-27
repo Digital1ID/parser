@@ -590,7 +590,7 @@ window.onload = async () => {
           renderSubtitleMenu(epData.subtitle);
           document.getElementById("videoTitle").innerText = show.titleTh||show.titleEn;
           document.title = `กำลังดู ${show.titleTh||show.titleEn} - ซีซั่น ${seasonNo} - ${epData.title}`;
-          seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo || 1}`;
+          seasonSelect.value = `?type=series&ids=${showId}/${seasonNo}/1`;
           episodeSelect.value = `?type=series&ids=${showId}/${seasonNo}/${targetEp.episodeNo}`;
         }
       }
