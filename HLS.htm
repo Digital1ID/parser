@@ -252,64 +252,99 @@ function extractAudioTracks(m3uText){
   return tracks; 
 }
 
-// --- Subtitle Metadata Loader with fallback ---
+// ===============================
+// GLOBAL
+// ===============================
+const video = document.getElementById("video");
+const subtitleOverlay = document.getElementById("subtitleOverlay");
+const subtitleSelector = document.getElementById("subtitleSelector");
+
+const bdnSubtitles = [];
+let activeBDNHandler = null;
+
+
+// ===============================
+// SUBTITLE METADATA (with fallback)
+// ===============================
 async function fetchSubtitleMetadata(cdnHostname, transcodeUuid){
   const url = `https://${cdnHostname}/${transcodeUuid}/subtitle_metadata.json`;
-  try {
+
+  try{
     const res = await fetch(url);
-    if(!res.ok){
-      return {
-        eng:[], tha:[
-          {codec:"VTT", pathName:"subtha", error:false},
-          {codec:"VTT", pathName:"subtha1", error:false},
-          {codec:"BDN", pathName:"subtha_2", error:false}
-        ], default:[]
-      };
-    }
+    if(!res.ok) throw new Error();
     return await res.json();
-  } catch(err){
+  }catch{
     return {
-      eng:[], tha:[
+      eng:[],
+      tha:[
         {codec:"VTT", pathName:"subtha", error:false},
         {codec:"VTT", pathName:"subtha1", error:false},
         {codec:"BDN", pathName:"subtha_2", error:false}
-      ], default:[]
+      ],
+      default:[]
     };
   }
 }
 
-// --- BDN Conversion ---
+
+// ===============================
+// BDN -> VTT CONVERSION
+// ===============================
 function timecodeToVTT(tc){
   const [hh,mm,ss,ms] = tc.split(/[:.]/).map(Number);
   const total = hh*3600 + mm*60 + ss + (ms||0)/1000;
+
   const h = String(Math.floor(total/3600)).padStart(2,"0");
   const m = String(Math.floor((total%3600)/60)).padStart(2,"0");
   const s = String(Math.floor(total%60)).padStart(2,"0");
   const msStr = String(Math.floor((total%1)*1000)).padStart(3,"0");
+
   return `${h}:${m}:${s}.${msStr}`;
 }
+
 function convertBDNtoVTT(xmlText){
   const xmlDoc = new DOMParser().parseFromString(xmlText,"application/xml");
   const events = xmlDoc.querySelectorAll("Event");
+
   let vtt = "WEBVTT\n\n";
+
   events.forEach((ev,idx)=>{
     const start = timecodeToVTT(ev.getAttribute("InTC"));
-    const end = timecodeToVTT(ev.getAttribute("OutTC"));
+    const end   = timecodeToVTT(ev.getAttribute("OutTC"));
     const g = ev.querySelector("Graphic");
     if(!g) return;
+
     const imgName = g.textContent.trim();
     vtt += `${idx+1}\n${start} --> ${end}\n${imgName}\n\n`;
   });
+
   return vtt;
 }
+
+
+// ===============================
+// LOAD BDN AS HIDDEN TRACK
+// ===============================
 async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
+
   const res = await fetch(`${baseUrl}/index.xml`);
   if(!res.ok) return {};
+
   const xmlText = await res.text();
   const folder = baseUrl.split('/').pop();
+
   const vttText = convertBDNtoVTT(xmlText);
   const blob = new Blob([vttText], {type:"text/vtt"});
   const vttUrl = URL.createObjectURL(blob);
+
+  // 🔥 ป้องกัน track ซ้ำ
+  const existing = Array.from(video.querySelectorAll("track"))
+    .find(t => t.dataset.bdn === "true" && t.srclang === lang);
+
+  if(existing){
+    existing.src = vttUrl;
+    return {folder};
+  }
 
   const track = document.createElement("track");
   track.kind = "subtitles";
@@ -317,65 +352,116 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
   track.srclang = lang;
   track.src = vttUrl;
   track.mode = "hidden";
+  track.dataset.bdn = "true"; // mark ว่าเป็น BDN
+
   video.appendChild(track);
 
   return {folder};
 }
 
-// --- Subtitle Rendering ---
-const bdnSubtitles=[];
+
+// ===============================
+// RENDER SUBTITLE MENU
+// ===============================
 function renderSubtitleMenu(subtitles){
-  const video=document.getElementById("video");
-  const subtitleSelector=document.getElementById("subtitleSelector");
-  subtitleSelector.innerHTML='<option value="none">No Subtitles</option>';
-  bdnSubtitles.length=0;
+
+  subtitleSelector.innerHTML = '<option value="none">No Subtitles</option>';
+  bdnSubtitles.length = 0;
 
   subtitles.forEach(sub=>{
-    const opt=document.createElement("option");
-    opt.value=sub.lang;
-    opt.text=sub.lang.toUpperCase()+" ("+sub.codec+")";
+    const opt = document.createElement("option");
+    opt.value = sub.lang;
+    opt.text  = sub.lang.toUpperCase()+" ("+sub.codec+")";
     subtitleSelector.appendChild(opt);
 
-    if(sub.codec==="VTT"){
-      const track=document.createElement("track");
+    if(sub.codec === "VTT"){
+      const track = document.createElement("track");
       track.kind="subtitles";
       track.label=sub.lang.toUpperCase();
       track.srclang=sub.lang;
       track.src=sub.src;
       video.appendChild(track);
     }
-    if(sub.codec==="BDN"){
+
+    if(sub.codec === "BDN"){
       bdnSubtitles.push(sub);
     }
   });
 
-  subtitleSelector.onchange=async()=>{
-    const selected=subtitleSelector.value;
-    Array.from(video.textTracks).forEach(track=>track.mode="disabled");
+  subtitleSelector.onchange = async ()=>{
+    const selected = subtitleSelector.value;
+
+    // 🔥 ปิดทุก track อย่างปลอดภัย
+    Array.from(video.textTracks).forEach(track=>{
+      track.mode = "disabled";
+    });
+
     subtitleOverlay.style.display="none";
     subtitleOverlay.style.opacity="0";
 
+    if(activeBDNHandler){
+      video.removeEventListener("timeupdate", activeBDNHandler);
+      activeBDNHandler = null;
+    }
+
     if(selected==="none") return;
 
-    const vttTrack=Array.from(video.textTracks).find(
-      t => t.srclang === selected || t.label.toLowerCase() === selected.toLowerCase()
+    // ====== VTT ======
+    const vttTrack = Array.from(video.textTracks).find(
+      t => t.srclang === selected && !t.dataset?.bdn
     );
+
     if(vttTrack){
       vttTrack.mode="showing";
       return;
     }
 
-    const bdnEntry=bdnSubtitles.find(sub=>sub.lang===selected);
+    // ====== BDN ======
+    const bdnEntry = bdnSubtitles.find(sub=>sub.lang===selected);
     if(bdnEntry){
-      const { folder }=await loadBDNAsVTT(
+
+      const {folder} = await loadBDNAsVTT(
         bdnEntry.src.replace("/index.xml",""),
         bdnEntry.videoId,
         bdnEntry.cdn,
         bdnEntry.lang
       );
+
       activateBDNOverlay(folder, bdnEntry.videoId, bdnEntry.cdn, bdnEntry.lang);
     }
   };
+}
+
+
+// ===============================
+// BDN OVERLAY ENGINE
+// ===============================
+function activateBDNOverlay(folder,videoId,cdn,lang){
+
+  const track = Array.from(video.textTracks)
+    .find(t => t.srclang === lang && t.dataset?.bdn === "true");
+
+  if(!track) return;
+
+  track.mode = "hidden";
+
+  activeBDNHandler = ()=>{
+    const cue = Array.from(track.activeCues || [])[0];
+
+    if(cue && cue.text.trim()){
+      const imgName = cue.text.trim();
+      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
+
+      subtitleOverlay.src = imgURL;
+      subtitleOverlay.style.display="block";
+      subtitleOverlay.style.opacity="1";
+    }else{
+      subtitleOverlay.style.opacity="0";
+      subtitleOverlay.style.display="none";
+    }
+  };
+
+  video.addEventListener("timeupdate", activeBDNHandler);
 }
 
 // --- Responsive Overlay ---
