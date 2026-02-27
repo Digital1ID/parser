@@ -1,62 +1,68 @@
-// /api/parser.js
-
 export default async function handler(req, res) {
   try {
-    const pageUrl = "https://full24th.com/dooball/?id=YOUR_ID";
 
-    // STEP 1: โหลดหน้าเพื่อดึง nonce
-    const pageRes = await fetch(pageUrl, {
+    // =========================
+    // STEP 1: ดึงตารางล่าสุด
+    // =========================
+    const tableRes = await fetch(
+      "https://full24th.com/wp-content/themes/dooball/_ajax_/getRefresh.php?id=all",
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Referer": "https://full24th.com/"
+        }
+      }
+    );
+
+    const tableHtml = await tableRes.text();
+
+    // ดึง match id ตัวแรก
+    const matchIdMatch = tableHtml.match(/data-match="(.*?)"/);
+
+    if (!matchIdMatch) {
+      return res.json({ status: false, error: "Match ID not found" });
+    }
+
+    const matchId = matchIdMatch[1];
+
+    // =========================
+    // STEP 2: เข้า page match
+    // =========================
+    const matchUrl = `https://full24th.com/dooball?id=${matchId}`;
+
+    const matchRes = await fetch(matchUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://full24th.com/"
       }
     });
 
-    const html = await pageRes.text();
+    const matchHtml = await matchRes.text();
 
-    // ดึง nonce
-    const nonceMatch = html.match(/"match_nonce":"(.*?)"/);
-    if (!nonceMatch) {
-      return res.json({ status: false, error: "Nonce not found" });
-    }
-
-    const nonce = nonceMatch[1];
-
-    // STEP 2: ยิง AJAX ไป admin-ajax.php
-    const ajaxRes = await fetch(
-      "https://full24th.com/wp-admin/admin-ajax.php",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0",
-          "Referer": pageUrl
-        },
-        body: new URLSearchParams({
-          action: "load_match",   // 🔥 ต้องตรงกับ Network ของคุณ
-          match_id: "YOUR_ID",
-          nonce: nonce
-        })
-      }
-    );
-
-    const ajaxText = await ajaxRes.text();
-
+    // =========================
     // STEP 3: หา m3u8
-    const m3u8Match = ajaxText.match(/https?:\/\/[^"]+\.m3u8[^"]*/);
+    // =========================
+    const m3u8Match = matchHtml.match(/https?:\/\/[^"]+\.m3u8[^"]*/);
 
     if (!m3u8Match) {
-      return res.json({ status: false, error: "m3u8 not found", debug: ajaxText });
+      return res.json({
+        status: false,
+        error: "m3u8 not found in match page"
+      });
     }
 
     const streamUrl = m3u8Match[0];
 
     return res.json({
       status: true,
+      matchId,
       stream: `/api/proxy?url=${encodeURIComponent(streamUrl)}`
     });
 
   } catch (err) {
-    return res.json({ status: false, error: err.message });
+    return res.json({
+      status: false,
+      error: err.message
+    });
   }
 }
