@@ -1,60 +1,62 @@
 export default async function handler(req, res) {
   try {
-    // ======================
-    // STEP 1: ดึงตาราง
-    // ======================
-    const tableRes = await fetch(
-      "https://full24th.com/wp-content/themes/dooball/_ajax_/getRefresh.php?id=all",
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Referer": "https://full24th.com/"
-        }
-      }
-    );
+    const { id, id_league, ch } = req.query;
 
-    const tableHtml = await tableRes.text();
-
-    // ======================
-    // STEP 2: ดึง match id จาก <tr id="">
-    // ======================
-    const matchIdMatch = tableHtml.match(
-      /<tr class="collapse" id="([a-z0-9]+)"/i
-    );
-
-    if (!matchIdMatch) {
+    if (!id || !id_league) {
       return res.json({
         status: false,
-        error: "Match ID not found"
+        error: "Missing id or id_league"
       });
     }
 
-    const matchId = matchIdMatch[1];
+    const pageUrl = `https://full24th.com/dooball/?id=${id}&id_league=${id_league}&ch=${ch || 0}`;
 
-    // ======================
-    // STEP 3: เข้า match page
-    // ======================
-    const matchUrl = `https://full24th.com/dooball?id=${matchId}`;
-
-    const matchRes = await fetch(matchUrl, {
+    // =========================
+    // STEP 1: โหลดหน้าเพื่อดึง nonce
+    // =========================
+    const pageRes = await fetch(pageUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://full24th.com/"
       }
     });
 
-    const matchHtml = await matchRes.text();
+    const pageHtml = await pageRes.text();
 
-    // ======================
-    // STEP 4: หา m3u8
-    // ======================
-    const m3u8Match = matchHtml.match(/https?:\/\/[^"]+\.m3u8[^"]*/);
+    const nonceMatch = pageHtml.match(/"match_nonce":"(.*?)"/);
+
+    if (!nonceMatch) {
+      return res.json({ status: false, error: "Nonce not found" });
+    }
+
+    const nonce = nonceMatch[1];
+
+    // =========================
+    // STEP 2: เรียก match.php
+    // =========================
+    const ajaxUrl =
+      `https://full24th.com/wp-content/themes/dooball/_ajax_/match.php?_nonce=${nonce}` +
+      `&id=${id}&id_league=${id_league}&ch=${ch || 0}`;
+
+    const ajaxRes = await fetch(ajaxUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": pageUrl
+      }
+    });
+
+    const ajaxHtml = await ajaxRes.text();
+
+    // =========================
+    // STEP 3: หา m3u8
+    // =========================
+    const m3u8Match = ajaxHtml.match(/https?:\/\/[^"]+\.m3u8[^"]*/);
 
     if (!m3u8Match) {
       return res.json({
         status: false,
         error: "m3u8 not found",
-        matchId
+        debug: ajaxHtml.substring(0, 500)
       });
     }
 
@@ -62,7 +64,6 @@ export default async function handler(req, res) {
 
     return res.json({
       status: true,
-      matchId,
       stream: `/api/pro?url=${encodeURIComponent(streamUrl)}`
     });
 
