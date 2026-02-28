@@ -368,51 +368,29 @@ function renderSubtitleMenu(subtitles){
 }
 
 // --- Responsive Overlay ---
-let activeBDNHandler = null;
+function activateBDNOverlay(folder,videoId,cdn,lang){
+  const track=Array.from(video.textTracks).find(
+    t => t.srclang === lang || t.label.toLowerCase() === lang.toLowerCase()
+  );
+  if(!track) return;
+  track.mode="hidden";
 
-function activateBDNOverlay(folder, videoId, cdn, lang){
-
-  const trackEl = Array.from(video.querySelectorAll("track"))
-    .find(t => t.srclang === lang);
-
-  if(!trackEl) return;
-
-  const track = trackEl.track;
-
-  // 🔥 สำคัญมาก: ห้าม showing
-  track.mode = "hidden";
-
-  // 🔥 กัน event ซ้อน
-  if(activeBDNHandler){
-    video.removeEventListener("timeupdate", activeBDNHandler);
-  }
-
-  activeBDNHandler = ()=>{
-
-    const cue = Array.from(track.activeCues || [])[0];
-
-    if(cue && cue.text.trim()){
-
-      const imgName = cue.text.trim();
-      const imgURL = `https://${cdn}/${videoId}/${folder}/${imgName}`;
-
-      // 🔥 ป้องกัน browser render text
-      cue.text = "";
-
-      if(subtitleOverlay.src !== imgURL){
-        subtitleOverlay.src = imgURL;
-      }
-
+  video.addEventListener("timeupdate",()=>{
+    const cue=Array.from(track.activeCues||[])[0];
+    if(cue&&cue.text.trim()){
+      const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
+      const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
+      subtitleOverlay.style.width = "3840";
+      subtitleOverlay.style.height = "2160";
+      subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
-
-    }else{
+      cue.onexit = ()=>{ subtitleOverlay.style.opacity="0"; subtitleOverlay.style.display="none"; };
+    } else {
       subtitleOverlay.style.opacity="0";
       subtitleOverlay.style.display="none";
     }
-  };
-
-  video.addEventListener("timeupdate", activeBDNHandler);
+  });
 }
 
 function loadAudioTracks(hls){
