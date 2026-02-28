@@ -374,6 +374,7 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
   );
   if(!track) return;
   track.mode="hidden";
+  vttTrack.mode="hidden";
 
   video.addEventListener("timeupdate",()=>{
     const cue=Array.from(track.activeCues||[])[0];
@@ -381,7 +382,7 @@ function activateBDNOverlay(folder,videoId,cdn,lang){
       const imgName=cue.text.replace(/<[^>]+>/g,"").trim();
       const imgURL=`https://${cdn}/${videoId}/${folder}/${imgName}`;
       subtitleOverlay.style.width = "3840";
-      subtitleOverlay.style.height = "2160";
+      subtitleOverlay.style.height = "144";
       subtitleOverlay.src=imgURL;
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
