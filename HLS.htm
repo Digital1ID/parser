@@ -398,13 +398,11 @@ function activateBDNOverlay(folder, videoId, cdn, lang){
 
       // 🔥 ป้องกัน browser render text
       cue.text = "";
-      
+
       if(subtitleOverlay.src !== imgURL){
         subtitleOverlay.src = imgURL;
       }
 
-      subtitleOverlay.style.width = "3840";
-      subtitleOverlay.style.height = "2160";
       subtitleOverlay.style.display="block";
       subtitleOverlay.style.opacity="1";
 
