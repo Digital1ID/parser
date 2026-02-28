@@ -298,7 +298,7 @@ async function loadBDNAsVTT(baseUrl, videoId, cdn, lang){
   const folder = baseUrl.split('/').pop();
   const vttText = convertBDNtoVTT(xmlText);
   //const blob = new Blob([vttText], {type:"text/vtt"});
-  const vttUrl = URL.createObjectURL(blob);
+  //const vttUrl = URL.createObjectURL(blob);
 
   const track = document.createElement("track");
   track.kind = "subtitles";
