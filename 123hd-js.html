@@ -61,16 +61,15 @@ async function main() {
   // ดึง episodes จากตาราง Sequel
   const epRows = doc.querySelectorAll("#Sequel tbody tr");
   let episodes = [];
-  for (const row of epRows) {
+
+  // ใช้ Promise.all เพื่อดึงทุกตอนพร้อมกัน
+  episodes = await Promise.all([...epRows].map(async row => {
     const epNum = parseInt(row.querySelector("td:nth-child(2)")?.textContent.trim() || "0", 10);
     const epLink = row.querySelector("td a")?.href || "";
     const epTitle = row.querySelector("td a")?.textContent.trim() || `EP ${epNum}`;
-
-    // เข้าไปดึง m3u8 จริงจากหน้า EP
     const m3u8 = await getM3U8FromEpisode(epLink);
-
-    episodes.push({ number: epNum, epTitle, video: m3u8 });
-  }
+    return { number: epNum, epTitle, video: m3u8 };
+  }));
 
   const seriesData = { id: "a-knight-of-the-seven-kingdoms", poster, title, synopsis, episodes };
   const m3u = generateM3U(seriesData);
