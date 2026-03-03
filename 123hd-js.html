@@ -22,8 +22,14 @@ async function fetchViaProxy(url) {
   return await res.text();
 }
 
-// แปลง iframe embed → .m3u8
-function convertEmbedToM3U8(embedUrl) {
+// ดึง m3u8 จริงจากหน้า EP
+async function getM3U8FromEpisode(epUrl) {
+  const html = await fetchViaProxy(epUrl);
+  if (!html) return null;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const iframe = doc.querySelector("#ajax-player iframe");
+  if (!iframe) return null;
+  const embedUrl = iframe.src;
   try {
     const url = new URL(embedUrl);
     const id = url.searchParams.get("id");
@@ -32,53 +38,6 @@ function convertEmbedToM3U8(embedUrl) {
   } catch {
     return null;
   }
-}
-
-// สร้าง playlist .m3u
-function generateM3U(seriesData) {
-  let m3u = "#EXTM3U\n";
-  const logo = seriesData.poster || "";
-  const title = seriesData.title || "ซีรีส์";
-
-  for (const ep of seriesData.episodes) {
-    if (ep.video) {
-      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.number}", ${title} S01 EP${String(ep.number).padStart(2,"0")}\n`;
-      m3u += ep.video + "\n";
-    }
-  }
-  return m3u;
-}
-
-// สร้าง JSON Output
-function generateJSON(seriesData) {
-  return [{
-    id: seriesData.id || "",
-    name: seriesData.title || "",
-    category: "ซีรีส์",
-    info: {
-      poster: seriesData.poster || "",
-      description: seriesData.synopsis || "",
-      year: new Date().getFullYear()
-    },
-    seasons: [
-      {
-        season: 1,
-        name: "Season 1",
-        info: {
-          poster: seriesData.poster || "",
-          description: seriesData.synopsis || "",
-          year: new Date().getFullYear()
-        },
-        episodes: seriesData.episodes.map(ep => ({
-          episode: ep.number,
-          name: ep.epTitle || `ตอนที่ ${ep.number}`,
-          video: ep.video || "",
-          subtitle: "",
-          referrer: "https://main.24playerhd.com/"
-        }))
-      }
-    ]
-  }];
 }
 
 async function main() {
@@ -102,17 +61,16 @@ async function main() {
   // ดึง episodes จากตาราง Sequel
   const epRows = doc.querySelectorAll("#Sequel tbody tr");
   let episodes = [];
-  epRows.forEach(row => {
+  for (const row of epRows) {
     const epNum = parseInt(row.querySelector("td:nth-child(2)")?.textContent.trim() || "0", 10);
+    const epLink = row.querySelector("td a")?.href || "";
     const epTitle = row.querySelector("td a")?.textContent.trim() || `EP ${epNum}`;
 
-    // ดึง iframe player
-    const iframe = doc.querySelector("#ajax-player iframe");
-    const embedUrl = iframe?.src || "";
-    const m3u8 = convertEmbedToM3U8(embedUrl);
+    // เข้าไปดึง m3u8 จริงจากหน้า EP
+    const m3u8 = await getM3U8FromEpisode(epLink);
 
     episodes.push({ number: epNum, epTitle, video: m3u8 });
-  });
+  }
 
   const seriesData = { id: "a-knight-of-the-seven-kingdoms", poster, title, synopsis, episodes };
   const m3u = generateM3U(seriesData);
@@ -130,8 +88,8 @@ async function main() {
     </div>
   `;
 }
-
 main();
 </script>
+
 </body>
 </html>
