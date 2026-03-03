@@ -22,7 +22,6 @@ async function fetchViaProxy(url) {
   return await res.text();
 }
 
-// ดึง m3u8 จริงจากหน้า EP
 async function getM3U8FromEpisode(epUrl) {
   const html = await fetchViaProxy(epUrl);
   if (!html) return null;
@@ -53,17 +52,14 @@ async function main() {
 
   const doc = new DOMParser().parseFromString(html, "text/html");
 
-  // ดึงข้อมูลซีรีส์
   const title = doc.querySelector("h1.entry-title")?.textContent.trim() || "";
   const poster = doc.querySelector("img.movie-thumb")?.src || "";
   const synopsis = doc.querySelector("p.category")?.textContent.trim() || "";
 
-  // ดึง episodes จากตาราง Sequel
   const epRows = doc.querySelectorAll("#Sequel tbody tr");
-  let episodes = [];
 
-  // ใช้ Promise.all เพื่อดึงทุกตอนพร้อมกัน
-  episodes = await Promise.all([...epRows].map(async row => {
+  // ดึงทุกตอนพร้อมกัน
+  const episodes = await Promise.all([...epRows].map(async row => {
     const epNum = parseInt(row.querySelector("td:nth-child(2)")?.textContent.trim() || "0", 10);
     const epLink = row.querySelector("td a")?.href || "";
     const epTitle = row.querySelector("td a")?.textContent.trim() || `EP ${epNum}`;
