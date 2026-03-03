@@ -71,6 +71,53 @@ async function main() {
   const m3u = generateM3U(seriesData);
   const jsonData = generateJSON(seriesData);
 
+// สร้าง playlist .m3u
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster || "";
+  const title = seriesData.title || "ซีรีส์";
+  for (const ep of seriesData.episodes) {
+    if (ep.video) {
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.number}", ${title} S01 EP${String(ep.number).padStart(2,"0")}\n`;
+      m3u += ep.video + "\n";
+    }
+  }
+  return m3u;
+}
+
+// สร้าง JSON Output
+function generateJSON(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "ซีรีส์",
+    info: {
+      poster: seriesData.poster || "",
+      description: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: 1,
+        name: "Season 1",
+        info: {
+          poster: seriesData.poster || "",
+          description: seriesData.synopsis || "",
+          year: new Date().getFullYear()
+        },
+        episodes: seriesData.episodes.map(ep => ({
+          episode: ep.number,
+          name: ep.epTitle || `ตอนที่ ${ep.number}`,
+          video: ep.video || "",
+          subtitle: "",
+          referrer: "https://main.24playerhd.com/"
+        }))
+      }
+    ]
+  }];
+}
+
+  
   output.innerHTML = `
     <div class="series">
       <h2>${title}</h2>
