@@ -22,11 +22,13 @@ async function fetchViaProxy(url) {
   return await res.text();
 }
 
-async function getM3U8FromEpisode(epUrl) {
-  const html = await fetchViaProxy(epUrl);
+// ดึง m3u8 จริงจาก API halim_ajax_player
+async function getM3U8FromAPI(postId, episode, nonce) {
+  const apiUrl = `https://www.123hdtv.com/wp-content/themes/halimmovies_54/halim-ajax.php?action=halim_ajax_player&nonce=${nonce}&episode=${episode}&server=1&postid=${postId}`;
+  const html = await fetchViaProxy(apiUrl);
   if (!html) return null;
   const doc = new DOMParser().parseFromString(html, "text/html");
-  const iframe = doc.querySelector("#ajax-player iframe");
+  const iframe = doc.querySelector("iframe");
   if (!iframe) return null;
   const embedUrl = iframe.src;
   try {
@@ -46,7 +48,7 @@ function generateM3U(seriesData) {
   const title = seriesData.title || "ซีรีส์";
   for (const ep of seriesData.episodes) {
     if (ep.video) {
-      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.number}", ${title} S01 EP${String(ep.number).padStart(2,"0")}\n`;
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" tvg-season="1" tvg-episode="${ep.episode}", ${title} S01 EP${String(ep.episode).padStart(2,"0")}\n`;
       m3u += ep.video + "\n";
     }
   }
@@ -74,8 +76,8 @@ function generateJSON(seriesData) {
           year: new Date().getFullYear()
         },
         episodes: seriesData.episodes.map(ep => ({
-          episode: ep.number,
-          name: ep.epTitle || `ตอนที่ ${ep.number}`,
+          episode: ep.episode,
+          name: ep.name,
           video: ep.video || "",
           subtitle: "",
           referrer: "https://main.24playerhd.com/"
@@ -86,41 +88,40 @@ function generateJSON(seriesData) {
 }
 
 async function main() {
-  const seriesUrl = "https://www.123hdtv.com/a-knight-of-the-seven-kingdoms";
   const output = document.getElementById("output");
   output.innerHTML = "Loading...";
 
-  const html = await fetchViaProxy(seriesUrl);
-  if (!html) {
-    output.innerHTML = `<p>โหลดข้อมูลไม่สำเร็จ</p>`;
-    return;
-  }
+  // ค่า config จาก halim_cfg
+  const postId = 181920;
+  const nonce = "f597124a37";
+  const totalEpisodes = 6;
 
-  const doc = new DOMParser().parseFromString(html, "text/html");
-
-  const title = doc.querySelector("h1.entry-title")?.textContent.trim() || "";
-  const poster = doc.querySelector("img.movie-thumb")?.src || "";
-  const synopsis = doc.querySelector("p.category")?.textContent.trim() || "";
-
-  const epRows = doc.querySelectorAll("#Sequel tbody tr");
-
-  const episodes = await Promise.all([...epRows].map(async row => {
-    const epNum = parseInt(row.querySelector("td:nth-child(2)")?.textContent.trim() || "0", 10);
-    const epLink = row.querySelector("td a")?.href || "";
-    const epTitle = row.querySelector("td a")?.textContent.trim() || `EP ${epNum}`;
-    const m3u8 = await getM3U8FromEpisode(epLink);
-    return { number: epNum, epTitle, video: m3u8 };
+  // ดึงทุกตอนพร้อมกัน
+  const episodes = await Promise.all([...Array(totalEpisodes).keys()].map(async ep => {
+    const m3u8 = await getM3U8FromAPI(postId, ep, nonce);
+    return {
+      episode: ep + 1,
+      name: `A Knight of the Seven Kingdoms EP ${ep + 1}`,
+      video: m3u8 || ""
+    };
   }));
 
-  const seriesData = { id: "a-knight-of-the-seven-kingdoms", poster, title, synopsis, episodes };
+  const seriesData = {
+    id: "a-knight-of-the-seven-kingdoms",
+    poster: "https://parser-xi.vercel.app/wp-content/uploads/2026/01/A-Knight-of-the-Seven-Kingdoms-2026-300x450.jpg",
+    title: "A Knight of the Seven Kingdoms (2026)",
+    synopsis: "Genres: ซีรี่ย์ซับไทย, ซีรี่ย์ใหม่ 2026, ซีรี่ย์พากย์ไทย, ซีรี่ย์ฝรั่ง, Action บู๊, Adventure ผจญภัย, Drama ชีวิต, Fantasy แฟนตาซี, ดูซีรี่ย์ออนไลน์, ตอนแรก, พากย์ไทย, ซับไทย",
+    episodes
+  };
+
   const m3u = generateM3U(seriesData);
   const jsonData = generateJSON(seriesData);
 
   output.innerHTML = `
     <div class="series">
-      <h2>${title}</h2>
-      <img class="poster" src="${poster}" alt="${title}">
-      <p>${synopsis}</p>
+      <h2>${seriesData.title}</h2>
+      <img class="poster" src="${seriesData.poster}" alt="${seriesData.title}">
+      <p>${seriesData.synopsis}</p>
       <h3>Playlist (.m3u)</h3>
       <pre>${m3u}</pre>
       <h3>JSON Data</h3>
@@ -130,6 +131,5 @@ async function main() {
 }
 main();
 </script>
-
 </body>
 </html>
