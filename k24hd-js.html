@@ -98,7 +98,7 @@ function generateJSON(seriesData) {
         name: `Season ${seriesData.season || 1}`,
         info: {
           poster: seriesData.poster?.src || "",
-          description: seriesData.synopsis || "",
+          plot: seriesData.synopsis || "",
           year: new Date().getFullYear()
         },
         episodes: seriesData.episodes.map(ep => ({
