@@ -105,7 +105,6 @@ function generateJSON(seriesData) {
           episode: ep.number,
           name: ep.epTitle || `ตอนที่ ${ep.number}`,
           video: ep.m3u8List[0] || "",
-          subtitle: "",
           referrer: "https://hplay.hdplayfull.xyz/"
         }))
       }
