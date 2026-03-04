@@ -89,7 +89,7 @@ function generateJSON(seriesData) {
     category: "ซีรี่ย์",
     info: {
       poster: seriesData.poster?.src || "",
-      description: seriesData.synopsis || "",
+      plot: seriesData.synopsis || "",
       year: new Date().getFullYear()
     },
     seasons: [
@@ -116,6 +116,9 @@ function generateJSON(seriesData) {
 function generateJHAT(seriesData) {
   return [{
     player: "p2p/playlist",
+    id: seriesData.id || "",
+    nameEN: "",
+    nameTH: "",
     name: seriesData.title || "",
     category: "ซีรี่ย์",
     info: {
