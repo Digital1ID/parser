@@ -123,10 +123,9 @@ function generateJHAT(seriesData) {
     category: "ซีรี่ย์",
     info: {
       poster: seriesData.poster?.src || "",
-      description: seriesData.synopsis || "",
+      plot: seriesData.synopsis || "",
       year: new Date().getFullYear(),
-        sound: "พากย์ไทย",
-        subtitles: ""
+        sound: "พากย์ไทย"
       },
     video: seriesData.id || ""
   }];
