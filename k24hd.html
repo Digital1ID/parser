@@ -135,7 +135,10 @@ return null;
 
 function generateM3U(series){
 
-let m3u="#EXTM3U\n";
+let m3u = "#EXTM3U\n";
+
+const logo = series.poster || "";
+const group = "ซีรี่ย์";
 
 for(const ep of series.episodes){
 
@@ -143,9 +146,11 @@ for(const link of ep.m3u8List){
 
 if(!link) continue;
 
-m3u+=`#EXTINF:-1 tvg-logo="${series.poster}" tvg-season="${ep.season}" tvg-episode="${ep.number}",${series.title} S${ep.season}E${ep.number}\n`;
+const season = String(ep.season).padStart(2,"0");
+const episode = String(ep.number).padStart(2,"0");
 
-m3u+=link+"\n";
+m3u += `#EXTINF:-1 type="series" group-title="${group}" tvg-logo="${logo}" tvg-season="${ep.season}" tvg-episode="${ep.number}", ${series.title} S${season}E${episode}\n`;
+m3u += link + "\n";
 
 }
 
